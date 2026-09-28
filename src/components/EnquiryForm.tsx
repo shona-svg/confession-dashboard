@@ -1,7 +1,7 @@
 // The public enquiry form. It's shown on the Forms page for previewing, and on
 // its own at /forms/enquiry so it can be embedded in the WordPress site.
 // Phase 3+: submissions go to a Netlify Function that checks for spam and
-// saves straight into the database (and optionally forwards to HubSpot).
+// saves straight into the database.
 import { useState, type FormEvent } from 'react';
 import { useStore, type EnquiryInput } from '../data/store';
 import type { Source } from '../data/types';
@@ -27,7 +27,7 @@ const empty = {
   flexibleDate: false,
   guestCount: '',
   heardFrom: 'google' as Source,
-  accessibility: false,
+  accessibilityNeeds: '',
   message: '',
   marketingOptIn: false,
   website: '', // honeypot: people never see or fill this, spam bots do
@@ -38,7 +38,7 @@ export function EnquiryForm({ onSubmitted }: { onSubmitted?: (contactId: string,
   const [f, setF] = useState(empty);
   const [done, setDone] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF((p) => ({ ...p, [k]: e.target.value }));
-  const tick = (k: 'flexibleDate' | 'accessibility' | 'marketingOptIn') => (e: { target: { checked: boolean } }) =>
+  const tick = (k: 'flexibleDate' | 'marketingOptIn') => (e: { target: { checked: boolean } }) =>
     setF((p) => ({ ...p, [k]: e.target.checked }));
   const guests = Number(f.guestCount) || null;
 
@@ -56,7 +56,7 @@ export function EnquiryForm({ onSubmitted }: { onSubmitted?: (contactId: string,
       flexibleDate: f.flexibleDate,
       guestCount: guests,
       heardFrom: f.heardFrom,
-      accessibility: f.accessibility,
+      accessibilityNeeds: f.accessibilityNeeds,
       message: f.message,
       marketingOptIn: f.marketingOptIn,
     };
@@ -161,9 +161,16 @@ export function EnquiryForm({ onSubmitted }: { onSubmitted?: (contactId: string,
             ))}
           </select>
         </label>
-        <label className="check wide">
-          <input id="ef-access" type="checkbox" checked={f.accessibility} onChange={tick('accessibility')} />
-          I'd like to talk about accessibility for my guests (ramp access, DDA bathrooms, lowered bar, Auslan and more)
+        <label className="field wide">
+          <span>Accessibility needs</span>
+          <textarea
+            id="ef-access"
+            className="textarea"
+            style={{ minHeight: 64 }}
+            placeholder="Anything we should know so every guest can enjoy the night (optional)"
+            value={f.accessibilityNeeds}
+            onChange={set('accessibilityNeeds')}
+          />
         </label>
         <label className="check wide">
           <input id="ef-optin" type="checkbox" checked={f.marketingOptIn} onChange={tick('marketingOptIn')} />
@@ -175,7 +182,7 @@ export function EnquiryForm({ onSubmitted }: { onSubmitted?: (contactId: string,
         </label>
       </div>
       <p className="ef-privacy">
-        We collect these details to respond to your enquiry and plan your event. We don't share them or sell them. See
+        We collect these details to respond to your enquiry and plan your event. Any accessibility needs are used only to plan your event. We don't share or sell your details. See
         our privacy policy for how to access or correct your information.
       </p>
       <button type="submit" className="btn pink ef-submit">

@@ -1,6 +1,7 @@
 import { useStore } from '../data/store';
 import { AUDIENCE_LABEL, LOST_REASONS, RULES, SOURCES } from '../lib/stages';
 import { OwnerDot } from '../components/ui';
+import { TEMPLATES } from '../lib/templates';
 
 export default function SettingsPage() {
   const { data, resetSampleData } = useStore();
@@ -38,24 +39,24 @@ export default function SettingsPage() {
             <h2 className="card-title">Connections</h2>
           </div>
           <div className="list">
-            <div className="list-row">
-              <div className="grow">
-                <div className="title">HubSpot</div>
-                <div className="meta">Read-only hourly import of contacts, form submissions and deals. Phase 5</div>
+            {[
+              ['Gmail (Google Workspace)', 'Send emails from each person’s own Gmail, and show client replies on the timeline'],
+              ['Google Calendar', 'Tours and events appear on the venue manager’s calendar and move when they move'],
+              ['Mailchimp', 'Subscribed contacts and their tags go to Mailchimp. Signups, opens, clicks and unsubscribes come back'],
+              ['HubSpot (retiring)', 'One-off import of your existing contacts from a HubSpot export, then HubSpot can be cancelled'],
+            ].map(([name, what]) => (
+              <div className="list-row" key={name}>
+                <div className="grow">
+                  <div className="title">{name}</div>
+                  <div className="meta" style={{ whiteSpace: 'normal' }}>
+                    {what}
+                  </div>
+                </div>
+                <span className="flag warn">Not connected</span>
               </div>
-              <span className="flag warn">Not connected</span>
-            </div>
-            <div className="list-row">
-              <div className="grow">
-                <div className="title">Mailchimp</div>
-                <div className="meta">Read-only hourly import of signups, EDM opens and clicks. Phase 6</div>
-              </div>
-              <span className="flag warn">Not connected</span>
-            </div>
+            ))}
           </div>
-          <p className="small muted">
-            The dashboard never sends emails and never changes anything in HubSpot or Mailchimp.
-          </p>
+          <p className="small muted">EDMs are still sent from Mailchimp, and one-to-one emails from Gmail.</p>
         </section>
 
         <section className="card">
@@ -115,6 +116,33 @@ export default function SettingsPage() {
           </dl>
         </section>
       </div>
+
+      <section className="card">
+        <div className="card-head">
+          <h2 className="card-title">Email templates</h2>
+          <span className="card-note">Starting points only. Every email is edited before it's sent</span>
+        </div>
+        <div className="table-wrap">
+          <table className="data">
+            <thead>
+              <tr>
+                <th>Template</th>
+                <th>When</th>
+                <th>Subject</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TEMPLATES.filter((t) => t.id !== 'blank').map((t) => (
+                <tr key={t.id}>
+                  <td>{t.name}</td>
+                  <td className="muted">{t.when}</td>
+                  <td>{t.subject}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <section className="card">
         <div className="card-head">

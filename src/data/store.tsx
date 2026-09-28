@@ -19,7 +19,7 @@ import type {
 import { stageIndex } from '../lib/stages';
 import { buildInsights, type Insight } from '../lib/metrics';
 
-const STORAGE_KEY = 'confession-dashboard-sample-v3';
+const STORAGE_KEY = 'confession-dashboard-sample-v4';
 /** Stand-in for "the signed-in team member" until login arrives in phase 3. */
 export const CURRENT_USER_ID = 'tm-sam';
 
@@ -46,7 +46,16 @@ const nowIso = () => new Date().toISOString();
 
 export type NewContact = Omit<
   Contact,
-  'id' | 'createdAt' | 'lostReason' | 'lostReasonNote' | 'lostFromStage' | 'reviewRequestedAt' | 'reviewReceived' | 'acknowledgedAt'
+  | 'id'
+  | 'createdAt'
+  | 'lostReason'
+  | 'lostReasonNote'
+  | 'lostFromStage'
+  | 'reviewRequestedAt'
+  | 'reviewReceived'
+  | 'acknowledgedAt'
+  | 'accessibilityNeeds'
+  | 'marketingConsent'
 >;
 
 export type EventInput = Pick<VenueEvent, 'date' | 'startTime' | 'endTime' | 'space' | 'guestCount' | 'status' | 'notes'>;
@@ -63,7 +72,7 @@ export interface EnquiryInput {
   flexibleDate: boolean;
   guestCount: number | null;
   heardFrom: Source;
-  accessibility: boolean;
+  accessibilityNeeds: string;
   message: string;
   marketingOptIn: boolean;
 }
@@ -84,6 +93,7 @@ interface StoreValue {
   bookEvent(contactId: string, input: EventInput): void;
   updateEvent(eventId: string, patch: Partial<EventInput>): void;
   submitEnquiry(input: EnquiryInput): string;
+  sendEmail(contactId: string, email: { fromId: string; subject: string; body: string; isReviewRequest?: boolean }): void;
   requestReview(contactId: string): void;
   resetSampleData(): void;
 }
@@ -172,6 +182,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         reviewRequestedAt: null,
         reviewReceived: false,
         acknowledgedAt: null,
+        accessibilityNeeds: '',
+        marketingConsent: 'not_subscribed',
       };
       return {
         ...d,
@@ -358,6 +370,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
                   eventTypeId: input.eventTypeId ?? c.eventTypeId,
                   eventDate: input.eventDate ?? c.eventDate,
                   guestCount: input.guestCount ?? c.guestCount,
+                  accessibilityNeeds: input.accessibilityNeeds.trim() || c.accessibilityNeeds,
+                  marketingConsent: input.marketingOptIn ? 'subscribed' : c.marketingConsent,
                   acknowledgedAt: null,
                 }
               : c,
@@ -374,7 +388,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return next;
       }
       const id = resultId;
-      const audience: Audience = input.accessibility ? 'accessibility' : (eventType?.defaultAudience ?? 'milestone');
+      const needs = input.accessibilityNeeds.trim();
+      const audience: Audience = needs ? 'accessibility' : (eventType?.defaultAudience ?? 'milestone');
       const contact: Contact = {
         id,
         firstName: input.firstName.trim(),
@@ -398,6 +413,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         reviewRequestedAt: null,
         reviewReceived: false,
         acknowledgedAt: null,
+        accessibilityNeeds: needs,
+        marketingConsent: input.marketingOptIn ? 'subscribed' : 'not_subscribed',
       };
       const extra: Activity[] = input.marketingOptIn
         ? [{ id: newId('act'), contactId: id, type: 'mailchimp_signup', occurredAt: at, summary: 'Ticked “keep me posted” on the enquiry form', createdBy: 'Website form' }]
@@ -411,6 +428,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
     return resultId;
   }, []);
+
+  const sendEmail = useCallback(
+    (contactId: string, email: { fromId: string; subject: string; body: string; isReviewRequest?: boolean }) => {
+      setData((d) => {
+        const at = nowIso();
+        const sent: Activity = {
+          id: newId('act'),
+          contactId,
+          type: 'email_out',
+          occurredAt: at,
+          summary: email.subject,
+          createdBy: email.fromId,
+          detail: email.body,
+        };
+        return {
+          ...d,
+          contacts: email.isReviewRequest
+            ? d.contacts.map((c) => (c.id === contactId ? { ...c, reviewRequestedAt: c.reviewRequestedAt ?? at } : c))
+            : d.contacts,
+          activities: [...d.activities, sent],
+        };
+      });
+    },
+    [],
+  );
 
   const requestReview = useCallback((contactId: string) => {
     setData((d) => ({
@@ -442,6 +484,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     bookEvent,
     updateEvent,
     submitEnquiry,
+    sendEmail,
     requestReview,
     resetSampleData,
   };

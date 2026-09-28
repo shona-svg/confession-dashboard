@@ -2319,3 +2319,36 @@ pre.code {
 .ef-done .btn {
   align-self: flex-start;
 }
+
+/* ---------- Email ---------- */
+
+.composer-body {
+  min-height: 260px;
+  font-family: var(--font-body);
+  line-height: 1.55;
+}
+
+.email-detail {
+  margin-top: 4px;
+}
+
+.email-detail summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pink-ink);
+}
+
+.email-detail pre {
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  font-size: 13px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 6px 0 0;
+}
+
+.facts .wide-fact {
+  grid-column: 1 / -1;
+}

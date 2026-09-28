@@ -69,7 +69,7 @@ export default function Layout() {
         <div className="sample-banner">
           <span>
             <strong>Sample data.</strong> These are made-up contacts for trying the design. Changes are saved in this
-            browser only, and nothing is sent to HubSpot, Mailchimp or clients.
+            browser only, and no emails are sent.
           </span>
           <button type="button" className="link-btn" onClick={resetSampleData}>
             Reset sample data

@@ -5,7 +5,8 @@ import type { Contact } from '../data/types';
 import { RULES, SOURCE_LABEL } from '../lib/stages';
 import { formatDate, fullName, timeAgo } from '../lib/format';
 import { OwnerDot, useToast } from './ui';
-import { BookTourModal, LogActivityModal } from './modals';
+import { BookTourModal } from './modals';
+import { EmailComposer } from './EmailComposer';
 
 /** Enquiries and signups nobody has actioned yet, oldest first so nothing waits. */
 export function NewLeads() {
@@ -32,7 +33,7 @@ export function NewLeads() {
           </h2>
         </div>
         <p className="new-leads-note">
-          From HubSpot forms and Mailchimp signups. A lead leaves this list once someone replies, calls, books a tour or
+          From the website form and Mailchimp signups. A lead leaves this list once someone replies, calls, books a tour or
           marks it as seen.
         </p>
       </div>
@@ -75,7 +76,7 @@ export function NewLeads() {
                   {c.stage === 'lead' ? (
                     <>
                       <button className="btn small" onClick={() => setLogging(c)}>
-                        Log reply
+                        Reply
                       </button>
                       <button className="btn small" onClick={() => setTouring(c)}>
                         Book tour
@@ -97,7 +98,7 @@ export function NewLeads() {
           })}
         </div>
       )}
-      {logging && <LogActivityModal contact={logging} initialType="email_out" onClose={() => setLogging(null)} />}
+      {logging && <EmailComposer contact={logging} initialTemplate={logging.stage === 'lead' ? 'first_reply' : 'blank'} onClose={() => setLogging(null)} />}
       {touring && <BookTourModal contact={touring} onClose={() => setTouring(null)} />}
     </section>
   );

@@ -369,3 +369,35 @@ These go beyond the original "read-only" rule, so each needs an explicit yes bef
   the existing contact rather than duplicated. Optional extras (need a yes): forward a copy to
   HubSpot through its Forms API so HubSpot workflows still run, and add "keep me posted"
   opt-ins to Mailchimp.
+
+---
+
+## 9. Revised direction: the dashboard replaces HubSpot (decided after phase 2)
+
+- **The dashboard becomes the CRM.** Existing HubSpot contacts are imported once from a HubSpot CSV
+  export, then HubSpot can be cancelled. There's no ongoing HubSpot sync.
+- **Mailchimp stays for EDMs**, synced both ways:
+  - Out to Mailchimp: contacts who've agreed to marketing (`marketing_consent = subscribed`), with
+    tags for status, stage, event type, audience, source and any free-form tags.
+  - Back from Mailchimp: new signups (arrive as Prospects), opens, clicks and unsubscribes.
+  - Never sent: accessibility needs, notes, emails, values.
+- **Gmail (Google Workspace) for one-to-one email.** Each team member connects their own Workspace
+  account (an "internal" Google app, so no Google review process). From a contact they can:
+  - Send an email from a template, edited first, through the Gmail API. It lands in their Gmail
+    Sent folder like any other email.
+  - See the whole email history with that client on the timeline, including emails sent from Gmail
+    itself and the client's replies. The dashboard stores the date, subject and direction, and loads
+    the email text from Gmail when it's opened, so full email bodies aren't copied into the database.
+  - Replies reset the follow-up clock and count toward first reply time automatically.
+- **Google Calendar:** tours and events are added to, moved on or removed from the venue manager's calendar.
+- **Login:** "Sign in with Google", limited to the Confession Workspace domain.
+
+New contact fields: `accessibility_needs` (sensitive, only shown inside the dashboard) and `marketing_consent`.
+
+### Revised phases
+3. Supabase database + Google sign-in (Workspace only), replacing sample data.
+4. Deploy to Netlify; the enquiry form goes live for WordPress.
+5. Import existing contacts from a HubSpot export (with a preview and duplicate check first).
+6. Mailchimp two-way sync.
+7. Gmail: send from the dashboard, email history on the timeline. Google Calendar sync.
+8. README.

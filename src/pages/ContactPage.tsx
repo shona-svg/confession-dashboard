@@ -15,6 +15,9 @@ import { formatDate, formatDateTime, formatHours, formatMoney, fullName, timeAgo
 import { Empty, Flags, OwnerDot, StageNum, StatusTag, useToast } from '../components/ui';
 import { BookTourModal, ContactFormModal, LogActivityModal, LostModal } from '../components/modals';
 import { ClientJourney } from '../components/ClientJourney';
+import { EmailComposer } from '../components/EmailComposer';
+import { CONSENT_LABEL, mailchimpTags } from '../lib/mailchimp';
+import type { MarketingConsent } from '../data/types';
 import { RescheduleModal, TourCard } from '../components/tours';
 import { EditEventModal, EventCard, NewBookingModal } from '../components/bookings';
 import type { Tour, VenueEvent } from '../data/types';
@@ -29,7 +32,13 @@ import {
   StepIcon,
 } from '../components/Icons';
 
-type ModalKind = { kind: 'log'; type: ActivityType } | { kind: 'tour' } | { kind: 'event' } | { kind: 'edit' } | { kind: 'lost' };
+type ModalKind =
+  | { kind: 'log'; type: ActivityType }
+  | { kind: 'tour' }
+  | { kind: 'event' }
+  | { kind: 'edit' }
+  | { kind: 'lost' }
+  | { kind: 'email' };
 
 const CLIENT_TYPES: ActivityType[] = ['form_submission', 'email_in', 'edm_open', 'edm_click', 'mailchimp_signup'];
 
@@ -94,6 +103,7 @@ export default function ContactPage() {
           title: ACTIVITY_LABEL[a.type],
           body: a.summary !== ACTIVITY_LABEL[a.type] ? a.summary : '',
           by: a.createdBy,
+          detail: a.detail,
         })),
       ...data.stageChanges
         .filter((s) => s.contactId === id)
@@ -104,6 +114,7 @@ export default function ContactPage() {
           title: s.fromStage ? `${STAGE_LABEL[s.fromStage]} → ${STAGE_LABEL[s.toStage]}` : `Added as ${STAGE_LABEL[s.toStage]}`,
           body: '',
           by: s.changedBy,
+          detail: undefined as string | undefined,
         })),
     ];
     return items
@@ -167,6 +178,9 @@ export default function ContactPage() {
           </div>
         </div>
         <div className="page-actions">
+          <button className="btn primary" onClick={() => setModal({ kind: 'email' })}>
+            <MailIcon size={15} /> Send email
+          </button>
           <button className="btn" onClick={() => setModal({ kind: 'log', type: 'call' })}>
             <PhoneIcon size={15} /> Log call
           </button>
@@ -176,7 +190,7 @@ export default function ContactPage() {
           <button className="btn" onClick={() => setModal({ kind: 'tour' })}>
             <CalendarIcon size={15} /> Book tour
           </button>
-          <button className="btn primary" onClick={() => setModal({ kind: 'edit' })}>
+          <button className="btn" onClick={() => setModal({ kind: 'edit' })}>
             Edit details
           </button>
         </div>
@@ -292,6 +306,13 @@ export default function ContactPage() {
                 <dt>Enquired</dt>
                 <dd>{insight.enquiredAt ? formatDateTime(insight.enquiredAt) : 'Not yet'}</dd>
               </div>
+              {c.accessibilityNeeds && (
+                <div className="wide-fact">
+                  <dt>Accessibility needs</dt>
+                  <dd>{c.accessibilityNeeds}</dd>
+                  <dd className="small muted">Only for planning their event. Never sent to Mailchimp.</dd>
+                </div>
+              )}
               <div>
                 <dt>First reply</dt>
                 <dd>
@@ -403,11 +424,51 @@ export default function ContactPage() {
 
           <section className="card">
             <div className="card-head">
+              <h2 className="card-title">Mailchimp</h2>
+              <span className={`flag ${c.marketingConsent === 'subscribed' ? 'good' : c.marketingConsent === 'unsubscribed' ? 'bad' : 'plain-flag'}`}>
+                {CONSENT_LABEL[c.marketingConsent]}
+              </span>
+            </div>
+            {c.marketingConsent === 'subscribed' ? (
+              <>
+                <p className="small muted" style={{ marginTop: 0 }}>These tags keep their Mailchimp record up to date for EDMs:</p>
+                <div className="tag-editor">
+                  {mailchimpTags(c, data.eventTypes.find((e) => e.id === c.eventTypeId)?.name ?? null).map((t) => (
+                    <span key={t} className="tag plain">
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="small muted" style={{ marginTop: 0 }}>
+                {c.marketingConsent === 'unsubscribed'
+                  ? 'They unsubscribed, so they won’t get EDMs. One-to-one emails about their booking are still fine.'
+                  : 'Not on the mailing list. They’re only added once they’ve agreed to marketing emails.'}
+              </p>
+            )}
+            <label className="field" style={{ marginTop: 12, maxWidth: 280 }}>
+              <span>Marketing consent</span>
+              <select
+                id="mc-consent"
+                className="select"
+                value={c.marketingConsent}
+                onChange={(e) => updateContact(c.id, { marketingConsent: e.target.value as MarketingConsent })}
+              >
+                <option value="subscribed">Subscribed (they agreed)</option>
+                <option value="not_subscribed">Not subscribed</option>
+                <option value="unsubscribed">Unsubscribed</option>
+              </select>
+            </label>
+          </section>
+
+          <section className="card">
+            <div className="card-head">
               <h2 className="card-title">Privacy</h2>
             </div>
             <p className="small muted" style={{ marginTop: 0 }}>
               If this person asks for their information to be removed, delete them here. This removes their details,
-              timeline and tours from the dashboard. It doesn't touch HubSpot or Mailchimp.
+              timeline, tours and events from the dashboard, and (once connected) removes them from Mailchimp too.
             </p>
             {confirmDelete ? (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -467,6 +528,12 @@ export default function ContactPage() {
                     <div>
                       <div className="what">{item.title}</div>
                       {item.body && <div>{item.body}</div>}
+                      {item.detail && (
+                        <details className="email-detail">
+                          <summary>Show email</summary>
+                          <pre>{item.detail}</pre>
+                        </details>
+                      )}
                       <div className="when">
                         {formatDateTime(item.at)} · {whoLabel(item.by)}
                       </div>
@@ -483,6 +550,7 @@ export default function ContactPage() {
 
       {moving && <RescheduleModal tour={moving} onClose={() => setMoving(null)} />}
       {modal?.kind === 'log' && <LogActivityModal contact={c} initialType={modal.type} onClose={() => setModal(null)} />}
+      {modal?.kind === 'email' && <EmailComposer contact={c} onClose={() => setModal(null)} />}
       {modal?.kind === 'tour' && <BookTourModal contact={c} onClose={() => setModal(null)} />}
       {modal?.kind === 'event' && <NewBookingModal contact={c} initialKind="event" onClose={() => setModal(null)} />}
       {editingEvent && <EditEventModal event={editingEvent} onClose={() => setEditingEvent(null)} />}

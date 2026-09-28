@@ -70,7 +70,13 @@ export interface Contact {
   reviewReceived: boolean;
   /** Set when someone marks a new enquiry as seen without needing to reply. */
   acknowledgedAt: string | null;
+  /** In the client's own words, only to plan their event. Sensitive: never sent to Mailchimp. */
+  accessibilityNeeds: string;
+  /** Whether they've agreed to marketing email. Only "subscribed" contacts go to Mailchimp. */
+  marketingConsent: MarketingConsent;
 }
+
+export type MarketingConsent = 'subscribed' | 'not_subscribed' | 'unsubscribed';
 
 export interface StageChange {
   id: string;
@@ -78,7 +84,7 @@ export interface StageChange {
   fromStage: Stage | null;
   toStage: Stage;
   changedAt: string;
-  changedBy: string; // team member id, or a label such as "HubSpot sync"
+  changedBy: string; // team member id, or a label such as "Website form" or "Mailchimp sync"
 }
 
 export type TourStatus = 'booked' | 'attended' | 'no_show' | 'cancelled';
@@ -137,6 +143,8 @@ export interface Activity {
   occurredAt: string;
   summary: string;
   createdBy: string;
+  /** Full text of an email sent from the dashboard (the live version reads it from Gmail instead). */
+  detail?: string;
 }
 
 export interface Dataset {

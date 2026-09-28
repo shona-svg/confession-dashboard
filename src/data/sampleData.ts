@@ -300,6 +300,22 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         reviewRequestedAt: null,
         reviewReceived: false,
         acknowledgedAt: null,
+        accessibilityNeeds:
+          audience === 'accessibility'
+            ? rnd.pick([
+                'Two guests use wheelchairs, and my aunt is Deaf so we may need an Auslan interpreter for speeches',
+                'My son uses a power chair and needs space to move around the dance floor',
+                'A few guests have low vision, so large-print menus would help',
+              ])
+            : '',
+        marketingConsent:
+          source === 'mailchimp_signup' || target === 'prospect'
+            ? 'subscribed'
+            : rnd.chance(0.08)
+              ? 'unsubscribed'
+              : rnd.chance(0.45)
+                ? 'subscribed'
+                : 'not_subscribed',
       };
       contacts.push(contact);
 
@@ -314,8 +330,8 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         continue;
       }
 
-      move(cid, startedAsProspect ? 'prospect' : null, 'lead', enquiredAt, 'HubSpot sync');
-      act(cid, 'form_submission', enquiredAt, enquirySummary(source, etName, guestCount), 'HubSpot sync');
+      move(cid, startedAsProspect ? 'prospect' : null, 'lead', enquiredAt, 'Website form');
+      act(cid, 'form_submission', enquiredAt, enquirySummary(source, etName, guestCount), 'Website form');
 
       // Leads: some replied, some still waiting.
       const leadWaiting = target === 'lead' && k < 4;
@@ -323,7 +339,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         act(cid, 'email_out', enquiredAt + replyAfter, 'Re: your enquiry. Tour times this week', owner);
       }
       if (target === 'lead') {
-        if (k >= 4 && k % 2 === 0) act(cid, 'email_in', enquiredAt + replyAfter + 5 * HOUR, 'Thanks! Checking dates with my partner', 'HubSpot sync');
+        if (k >= 4 && k % 2 === 0) act(cid, 'email_in', enquiredAt + replyAfter + 5 * HOUR, 'Thanks! Checking dates with my partner', 'Gmail sync');
         addEdm(cid, enquiredAt);
         continue;
       }
@@ -374,7 +390,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         act(cid, 'proposal_sent', at, `Proposal sent for ${etName}, ${guestCount} guests`, owner);
         lastStep = at;
         if (target === 'proposal_sent' && rnd.chance(0.5)) {
-          act(cid, 'email_in', at + rnd.between(1, 3) * DAY, 'Question about styling and bump-in times', 'HubSpot sync');
+          act(cid, 'email_in', at + rnd.between(1, 3) * DAY, 'Question about styling and bump-in times', 'Gmail sync');
         }
       }
 
@@ -384,7 +400,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         const at = enquiredAt + confirmAfter;
         move(cid, current, 'confirmed', at, owner);
         current = 'confirmed';
-        act(cid, 'email_in', at, 'Deposit paid. Date locked in', 'HubSpot sync');
+        act(cid, 'email_in', at, 'Deposit paid. Date locked in', 'Gmail sync');
         lastStep = at;
       }
 

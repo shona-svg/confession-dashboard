@@ -7,11 +7,13 @@ import type { Insight } from '../lib/metrics';
 import { formatDateTime, formatMoney, fullName, timeAgo } from '../lib/format';
 import { Empty, OwnerDot, StatusTag } from '../components/ui';
 import { LogActivityModal } from '../components/modals';
+import { EmailComposer } from '../components/EmailComposer';
 
 export default function FollowUpsPage() {
   const { data, insights } = useStore();
   const [owner, setOwner] = useState('');
   const [logging, setLogging] = useState<Contact | null>(null);
+  const [emailing, setEmailing] = useState<Contact | null>(null);
   const all = [...insights.values()].filter((i) => !owner || i.contact.ownerId === owner);
 
   const noReply = all.filter((i) => i.replyOverdue).sort((a, b) => a.enquiredAt! - b.enquiredAt!);
@@ -33,8 +35,11 @@ export default function FollowUpsPage() {
         </div>
       </div>
       <StatusTag stage={i.contact.stage} />
+      <button className="btn small primary" onClick={() => setEmailing(i.contact)}>
+        Send follow-up
+      </button>
       <button className="btn small" onClick={() => setLogging(i.contact)}>
-        Log contact
+        Log call
       </button>
     </div>
   );
@@ -104,6 +109,7 @@ export default function FollowUpsPage() {
       </section>
 
       {logging && <LogActivityModal contact={logging} onClose={() => setLogging(null)} />}
+      {emailing && <EmailComposer contact={emailing} onClose={() => setEmailing(null)} />}
     </div>
   );
 }

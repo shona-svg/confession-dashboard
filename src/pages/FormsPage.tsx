@@ -83,8 +83,7 @@ export default function FormsPage() {
             <ol className="steps">
               <li>It appears in New leads straight away, not an hour later.</li>
               <li>If the email is already known, it's added to that person's timeline instead of creating a duplicate.</li>
-              <li>“Keep me posted” adds them to Mailchimp (with your go-ahead, phase 6).</li>
-              <li>Optionally, a copy goes to HubSpot so its email workflows still run.</li>
+              <li>“Keep me posted” marks them as subscribed, and they're added to Mailchimp with their tags.</li>
               <li>Spam is blocked with a hidden trap field, plus a spam check once it's live.</li>
             </ol>
           </section>
@@ -94,9 +93,10 @@ export default function FormsPage() {
               <h2 className="card-title">Privacy</h2>
             </div>
             <p className="small" style={{ margin: 0 }}>
-              The form says why the details are collected, and marketing is opt-in with a separate tick box. For
-              accessibility it only asks whether they'd like to talk about it, never about anyone's disability.
-              Add a link to your privacy policy before it goes live.
+              The form says why the details are collected, and marketing is opt-in with a separate tick box.
+              Accessibility needs count as sensitive information under the Privacy Act, so they're used only to
+              plan the event, shown only inside the dashboard and never sent to Mailchimp. Add a link to your
+              privacy policy before the form goes live.
             </p>
           </section>
         </div>
