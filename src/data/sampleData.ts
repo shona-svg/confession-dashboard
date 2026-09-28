@@ -15,6 +15,7 @@ import type {
   StageChange,
   TeamMember,
   Tour,
+  VenueEvent,
 } from './types';
 
 export const SAMPLE_TEAM: TeamMember[] = [
@@ -157,6 +158,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
   const contacts: Contact[] = [];
   const stageChanges: StageChange[] = [];
   const tours: Tour[] = [];
+  const events: VenueEvent[] = [];
   const activities: Activity[] = [];
   let seq = 0;
   const id = (p: string) => `${p}-${++seq}`;
@@ -386,6 +388,23 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         lastStep = at;
       }
 
+      // Booked functions go on the calendar. Two proposals have the date pencilled in.
+      if (eventDateMs && (target === 'confirmed' || target === 'event_held' || (target === 'proposal_sent' && k < 2))) {
+        const corporateNight = isCorporate && new Date(eventDateMs).getDay() >= 1 && new Date(eventDateMs).getDay() <= 4;
+        events.push({
+          id: id('ev'),
+          contactId: cid,
+          date: dateOnly(eventDateMs),
+          startTime: corporateNight ? '17:30' : rnd.pick(['18:00', '18:30', '19:00']),
+          endTime: corporateNight ? '22:30' : rnd.pick(['23:00', '23:30', '00:00']),
+          space: guestCount > 150 ? 'altar_room_plus' : 'altar_room',
+          guestCount,
+          status: target === 'proposal_sent' ? 'hold' : 'confirmed',
+          notes: '',
+          createdAt: iso(Math.min(enquiredAt + (target === 'proposal_sent' ? proposalAfter : confirmAfter), nowMs)),
+        });
+      }
+
       if (target === 'event_held' && eventDateMs) {
         const heldAt = eventDateMs + DAY;
         move(cid, current, 'event_held', heldAt, 'Automatic');
@@ -421,7 +440,19 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
     }
   }
 
-  return { team: SAMPLE_TEAM, eventTypes: EVENT_TYPES, contacts, stageChanges, tours, activities };
+  // One event per date: nudge any sample clash along by a week.
+  const taken = new Set<string>();
+  for (const ev of events.sort((a, b) => a.date.localeCompare(b.date))) {
+    let d = new Date(ev.date + 'T12:00:00');
+    const step = d.getTime() < nowMs ? -7 * DAY : 7 * DAY; // keep past events in the past
+    while (taken.has(dateOnly(d.getTime()))) d = new Date(d.getTime() + step);
+    ev.date = dateOnly(d.getTime());
+    taken.add(ev.date);
+    const c = contacts.find((x) => x.id === ev.contactId);
+    if (c) c.eventDate = ev.date;
+  }
+
+  return { team: SAMPLE_TEAM, eventTypes: EVENT_TYPES, contacts, stageChanges, tours, events, activities };
 }
 
 function order(s: Stage): number {

@@ -60,7 +60,7 @@ export default function HomePage() {
           <span className="kpi-value">{stats.newEnquiries}</span>
           <span className="kpi-sub">Since Monday</span>
         </div>
-        <Link to="/tours" className="kpi" style={{ textDecoration: 'none' }}>
+        <Link to="/bookings" className="kpi" style={{ textDecoration: 'none' }}>
           <span className="kpi-label">Tours, next 7 days</span>
           <span className="kpi-value">{stats.toursNext7}</span>
           <span className="kpi-sub">See the tour calendar</span>
@@ -94,7 +94,7 @@ export default function HomePage() {
             <span className="d">Toured more than 48 hours ago</span>
           </span>
         </Link>
-        <Link to="/tours" className={`attn ${unmarkedTours.length ? 'warn' : 'ok'}`}>
+        <Link to="/bookings" className={`attn ${unmarkedTours.length ? 'warn' : 'ok'}`}>
           <span className="n">{unmarkedTours.length}</span>
           <span>
             <span className="t">Tours need an outcome</span>
@@ -137,7 +137,7 @@ export default function HomePage() {
         <section className="card">
           <div className="card-head">
             <h2 className="card-title">Upcoming tours</h2>
-            <Link to="/tours" className="small" style={{ color: 'var(--pink-ink)', fontWeight: 600 }}>
+            <Link to="/bookings" className="small" style={{ color: 'var(--pink-ink)', fontWeight: 600 }}>
               Calendar
             </Link>
           </div>

@@ -355,3 +355,17 @@ These go beyond the original "read-only" rule, so each needs an explicit yes bef
 
 ### Later
 - Drag-and-drop on the client journey map itself (e.g. said yes → booked → paid).
+
+### Added after the second round of feedback
+- **Bookings** replaces Tours: one calendar for venue tours and events. Drag a booking to another
+  day, click it to see the client (with edit and open-profile buttons), click an empty spot to book.
+  Events can be *held* (pencilled in, not paid) or *confirmed* (deposit paid, moves the contact to
+  Confirmed). The venue runs one event at a time, so a second event on the same date is flagged as a clash.
+  An optional layer shows the dates open leads have asked for.
+- New table: `events` (contact, date, start and end time, space, guests, status hold/confirmed/cancelled, notes).
+- **Forms:** a Confession-branded enquiry form that the dashboard hosts at `/forms/enquiry` (public,
+  no login) and WordPress embeds with a Custom HTML block. Submissions go to a Netlify Function that
+  blocks spam, saves straight into Supabase and shows up in New leads. Known email addresses are added to
+  the existing contact rather than duplicated. Optional extras (need a yes): forward a copy to
+  HubSpot through its Forms API so HubSpot workflows still run, and add "keep me posted"
+  opt-ins to Mailchimp.

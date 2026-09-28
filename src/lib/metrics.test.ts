@@ -35,6 +35,21 @@ describe('sample data', () => {
   });
 });
 
+describe('events', () => {
+  it('never double-books a date and keeps held events in the past', () => {
+    const live = data.events.filter((e) => e.status !== 'cancelled');
+    expect(new Set(live.map((e) => e.date)).size).toBe(live.length);
+    const today = new Date(NOW).toISOString().slice(0, 10);
+    for (const e of live) {
+      const c = data.contacts.find((x) => x.id === e.contactId)!;
+      expect(c.eventDate).toBe(e.date);
+      if (c.stage === 'event_held') expect(e.date < today).toBe(true);
+      if (c.stage === 'confirmed') expect(e.date >= today).toBe(true);
+    }
+    expect(live.filter((e) => e.status === 'hold')).toHaveLength(2);
+  });
+});
+
 describe('new leads', () => {
   it('lists unactioned enquiries and this week’s signups, not everyone', () => {
     const fresh = [...insights.values()].filter((i) => i.isNew);

@@ -325,21 +325,32 @@ export function LogActivityModal({
 
 // ---------- Book a tour ----------
 
-function nextTourSlot(): number {
-  const d = new Date();
-  d.setDate(d.getDate() + 3);
+/** A sensible default tour time: 11am, three days from now, or on the chosen day. */
+function nextTourSlot(day?: Date): number {
+  const d = day ? new Date(day) : new Date();
+  if (!day) d.setDate(d.getDate() + 3);
   d.setHours(11, 0, 0, 0);
   return d.getTime();
 }
 
-export function BookTourModal({ contact, onClose }: { contact?: Contact; onClose: () => void }) {
+export function TourForm({
+  contact,
+  initialDate,
+  onDone,
+  onCancel,
+}: {
+  contact?: Contact;
+  initialDate?: Date;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
   const { data, bookTour } = useStore();
   const toast = useToast();
   const candidates = data.contacts
     .filter((c) => c.stage !== 'event_held')
     .sort((a, b) => fullName(a).localeCompare(fullName(b)));
   const [contactId, setContactId] = useState(contact?.id ?? '');
-  const [when, setWhen] = useState(toLocalInput(nextTourSlot()));
+  const [when, setWhen] = useState(toLocalInput(nextTourSlot(initialDate)));
   const [hostId, setHostId] = useState(contact?.ownerId ?? data.team[0]?.id ?? '');
   const [notes, setNotes] = useState('');
   const submit = (e: FormEvent) => {
@@ -348,61 +359,67 @@ export function BookTourModal({ contact, onClose }: { contact?: Contact; onClose
     bookTour(contactId, new Date(when).toISOString(), hostId || null, notes.trim());
     const c = data.contacts.find((x) => x.id === contactId)!;
     toast(`Tour booked for ${c.firstName}`);
-    onClose();
+    onDone();
   };
   return (
-    <Modal title="Book a venue tour" onClose={onClose}>
-      <form onSubmit={submit} className="form-grid">
-        {!contact && (
-          <label className="field wide">
-            <span>Who's coming</span>
-            <select id="tour-contact" className="select" required value={contactId} onChange={(e) => setContactId(e.target.value)}>
-              <option value="">Choose a contact…</option>
-              {candidates.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {fullName(c)} · {STAGE_LABEL[c.stage]}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <label className="field">
-          <span>Date and time</span>
-          <input id="tour-when" className="input" type="datetime-local" required value={when} onChange={(e) => setWhen(e.target.value)} />
-        </label>
-        <label className="field">
-          <span>Host</span>
-          <select id="tour-host" className="select" value={hostId} onChange={(e) => setHostId(e.target.value)}>
-            <option value="">Unassigned</option>
-            {data.team.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
+    <form onSubmit={submit} className="form-grid">
+      {!contact && (
+        <label className="field wide">
+          <span>Who's coming</span>
+          <select id="tour-contact" className="select" required value={contactId} onChange={(e) => setContactId(e.target.value)}>
+            <option value="">Choose a contact…</option>
+            {candidates.map((c) => (
+              <option key={c.id} value={c.id}>
+                {fullName(c)} · {STAGE_LABEL[c.stage]}
               </option>
             ))}
           </select>
         </label>
-        <label className="field wide">
-          <span>Notes (optional)</span>
-          <input
-            id="tour-notes"
-            className="input"
-            placeholder="e.g. Bringing partner and mum"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </label>
-        <p className="wide small muted">
-          Invite the whole decision-making group: partner, parent, colleague. Remember, no pricing on the tour.
-        </p>
-        <div className="modal-actions wide">
-          <button type="button" className="btn" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn primary" disabled={!contactId}>
-            Book tour
-          </button>
-        </div>
-      </form>
+      )}
+      <label className="field">
+        <span>Date and time</span>
+        <input id="tour-when" className="input" type="datetime-local" required value={when} onChange={(e) => setWhen(e.target.value)} />
+      </label>
+      <label className="field">
+        <span>Host</span>
+        <select id="tour-host" className="select" value={hostId} onChange={(e) => setHostId(e.target.value)}>
+          <option value="">Unassigned</option>
+          {data.team.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field wide">
+        <span>Notes (optional)</span>
+        <input
+          id="tour-notes"
+          className="input"
+          placeholder="e.g. Bringing partner and mum"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </label>
+      <p className="wide small muted">
+        Invite the whole decision-making group: partner, parent, colleague. Remember, no pricing on the tour.
+      </p>
+      <div className="modal-actions wide">
+        <button type="button" className="btn" onClick={onCancel}>
+          Cancel
+        </button>
+        <button type="submit" className="btn primary" disabled={!contactId}>
+          Book tour
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function BookTourModal({ contact, initialDate, onClose }: { contact?: Contact; initialDate?: Date; onClose: () => void }) {
+  return (
+    <Modal title="Book a venue tour" onClose={onClose}>
+      <TourForm contact={contact} initialDate={initialDate} onDone={onClose} onCancel={onClose} />
     </Modal>
   );
 }

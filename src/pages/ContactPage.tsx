@@ -16,7 +16,8 @@ import { Empty, Flags, OwnerDot, StageNum, StatusTag, useToast } from '../compon
 import { BookTourModal, ContactFormModal, LogActivityModal, LostModal } from '../components/modals';
 import { ClientJourney } from '../components/ClientJourney';
 import { RescheduleModal, TourCard } from '../components/tours';
-import type { Tour } from '../data/types';
+import { EditEventModal, EventCard, NewBookingModal } from '../components/bookings';
+import type { Tour, VenueEvent } from '../data/types';
 import {
   CalendarIcon,
   CursorIcon,
@@ -28,7 +29,7 @@ import {
   StepIcon,
 } from '../components/Icons';
 
-type ModalKind = { kind: 'log'; type: ActivityType } | { kind: 'tour' } | { kind: 'edit' } | { kind: 'lost' };
+type ModalKind = { kind: 'log'; type: ActivityType } | { kind: 'tour' } | { kind: 'event' } | { kind: 'edit' } | { kind: 'lost' };
 
 const CLIENT_TYPES: ActivityType[] = ['form_submission', 'email_in', 'edm_open', 'edm_click', 'mailchimp_signup'];
 
@@ -52,6 +53,10 @@ function iconFor(type: ActivityType | 'stage') {
     case 'tour_attended':
     case 'tour_no_show':
     case 'tour_cancelled':
+    case 'tour_rescheduled':
+    case 'event_booked':
+    case 'event_moved':
+    case 'event_cancelled':
       return CalendarIcon;
     case 'review_requested':
       return StarIcon;
@@ -72,6 +77,7 @@ export default function ContactPage() {
   const [newTag, setNewTag] = useState('');
   const [tab, setTab] = useState<'overview' | 'journey'>('overview');
   const [moving, setMoving] = useState<Tour | null>(null);
+  const [editingEvent, setEditingEvent] = useState<VenueEvent | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'team' | 'client' | 'stages'>('all');
 
   const insight = id ? insights.get(id) : undefined;
@@ -324,6 +330,27 @@ export default function ContactPage() {
 
           <section className="card">
             <div className="card-head">
+              <h2 className="card-title">Events</h2>
+              <button className="btn small" onClick={() => setModal({ kind: 'event' })}>
+                Book event
+              </button>
+            </div>
+            {data.events.filter((e) => e.contactId === c.id).length === 0 ? (
+              <p className="muted small">No event booked yet. Hold a date while the proposal is out, or book it once the deposit is paid.</p>
+            ) : (
+              <div className="card-grid narrow">
+                {data.events
+                  .filter((e) => e.contactId === c.id)
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .map((e) => (
+                    <EventCard key={e.id} event={e} onEdit={setEditingEvent} />
+                  ))}
+              </div>
+            )}
+          </section>
+
+          <section className="card">
+            <div className="card-head">
               <h2 className="card-title">Tours</h2>
               <button className="btn small" onClick={() => setModal({ kind: 'tour' })}>
                 Book tour
@@ -457,6 +484,8 @@ export default function ContactPage() {
       {moving && <RescheduleModal tour={moving} onClose={() => setMoving(null)} />}
       {modal?.kind === 'log' && <LogActivityModal contact={c} initialType={modal.type} onClose={() => setModal(null)} />}
       {modal?.kind === 'tour' && <BookTourModal contact={c} onClose={() => setModal(null)} />}
+      {modal?.kind === 'event' && <NewBookingModal contact={c} initialKind="event" onClose={() => setModal(null)} />}
+      {editingEvent && <EditEventModal event={editingEvent} onClose={() => setEditingEvent(null)} />}
       {modal?.kind === 'edit' && <ContactFormModal contact={c} onClose={() => setModal(null)} />}
       {modal?.kind === 'lost' && <LostModal contact={c} onClose={() => setModal(null)} />}
     </div>

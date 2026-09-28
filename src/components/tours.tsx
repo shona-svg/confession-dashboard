@@ -1,17 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  addDays,
-  addMonths,
-  endOfMonth,
-  endOfWeek,
-  format,
-  isSameDay,
-  isSameMonth,
-  isToday,
-  startOfMonth,
-  startOfWeek,
-} from 'date-fns';
+import { format, isToday } from 'date-fns';
 import { useStore, useTeamName } from '../data/store';
 import type { Tour, TourStatus } from '../data/types';
 import { STAGE_LABEL } from '../lib/stages';
@@ -174,94 +163,5 @@ export function RescheduleModal({ tour, onClose }: { tour: Tour; onClose: () => 
         </div>
       </form>
     </Modal>
-  );
-}
-
-/** Month calendar. Each day shows its tours; clicking a day selects it. */
-export function TourCalendar({
-  tours,
-  month,
-  onMonth,
-  selected,
-  onSelect,
-}: {
-  tours: Tour[];
-  month: Date;
-  onMonth: (d: Date) => void;
-  selected: Date;
-  onSelect: (d: Date) => void;
-}) {
-  const { insights } = useStore();
-  const gridStart = startOfWeek(startOfMonth(month), { weekStartsOn: 1 });
-  const gridEnd = endOfWeek(endOfMonth(month), { weekStartsOn: 1 });
-  const days: Date[] = [];
-  for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) days.push(d);
-
-  return (
-    <div className="cal">
-      <div className="cal-head">
-        <h2 className="card-title">{format(month, 'MMMM yyyy')}</h2>
-        <div className="page-actions">
-          <button className="btn small" onClick={() => onMonth(addMonths(month, -1))} aria-label="Previous month">
-            ←
-          </button>
-          <button
-            className="btn small"
-            onClick={() => {
-              onMonth(startOfMonth(new Date()));
-              onSelect(new Date());
-            }}
-          >
-            Today
-          </button>
-          <button className="btn small" onClick={() => onMonth(addMonths(month, 1))} aria-label="Next month">
-            →
-          </button>
-        </div>
-      </div>
-      <div className="cal-grid" role="grid" aria-label={format(month, 'MMMM yyyy')}>
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
-          <div key={d} className="cal-dow" role="columnheader">
-            {d}
-          </div>
-        ))}
-        {days.map((d) => {
-          const dayTours = tours
-            .filter((t) => isSameDay(new Date(t.scheduledFor), d))
-            .sort((a, b) => a.scheduledFor.localeCompare(b.scheduledFor));
-          const cls = [
-            'cal-day',
-            isSameMonth(d, month) ? '' : 'other',
-            isToday(d) ? 'today' : '',
-            isSameDay(d, selected) ? 'selected' : '',
-          ].join(' ');
-          return (
-            <button
-              key={d.toISOString()}
-              type="button"
-              role="gridcell"
-              className={cls}
-              onClick={() => onSelect(d)}
-              aria-label={`${format(d, 'EEEE d MMMM')}: ${dayTours.length} ${dayTours.length === 1 ? 'tour' : 'tours'}`}
-              aria-pressed={isSameDay(d, selected)}
-            >
-              <span className="cal-num">{format(d, 'd')}</span>
-              <span className="cal-chips">
-                {dayTours.slice(0, 3).map((t) => {
-                  const c = insights.get(t.contactId)?.contact;
-                  return (
-                    <span key={t.id} className={`cal-chip status-${t.status}`}>
-                      <b>{format(new Date(t.scheduledFor), 'h:mm')}</b> {c ? c.firstName : ''}
-                    </span>
-                  );
-                })}
-                {dayTours.length > 3 && <span className="cal-more">+{dayTours.length - 3} more</span>}
-              </span>
-              {dayTours.length > 0 && <span className="cal-dot">{dayTours.length}</span>}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }

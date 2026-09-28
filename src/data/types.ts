@@ -93,6 +93,23 @@ export interface Tour {
   notes: string;
 }
 
+export type EventStatus = 'hold' | 'confirmed' | 'cancelled';
+export type Space = 'altar_room' | 'altar_room_plus';
+
+/** A function booked at the venue. One event at a time, so dates shouldn't overlap. */
+export interface VenueEvent {
+  id: string;
+  contactId: string;
+  date: string; // yyyy-mm-dd
+  startTime: string; // HH:mm
+  endTime: string; // HH:mm
+  space: Space;
+  guestCount: number | null;
+  status: EventStatus; // hold = pencilled in, not paid; confirmed = deposit paid
+  notes: string;
+  createdAt: string;
+}
+
 export type ActivityType =
   | 'form_submission'
   | 'email_out'
@@ -104,6 +121,9 @@ export type ActivityType =
   | 'tour_no_show'
   | 'tour_cancelled'
   | 'tour_rescheduled'
+  | 'event_booked'
+  | 'event_moved'
+  | 'event_cancelled'
   | 'proposal_sent'
   | 'review_requested'
   | 'mailchimp_signup'
@@ -125,5 +145,6 @@ export interface Dataset {
   contacts: Contact[];
   stageChanges: StageChange[];
   tours: Tour[];
+  events: VenueEvent[];
   activities: Activity[];
 }

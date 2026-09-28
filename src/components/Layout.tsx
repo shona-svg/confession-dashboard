@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoWhite from '../../brand/confession-logo-white.svg';
 import { useStore } from '../data/store';
-import { BellIcon, BoardIcon, CalendarIcon, ChartIcon, CloseIcon, CogIcon, HomeIcon, MenuIcon, PeopleIcon } from './Icons';
+import { BellIcon, BoardIcon, CalendarIcon, ChartIcon, CloseIcon, CogIcon, FormIcon, HomeIcon, MenuIcon, PeopleIcon } from './Icons';
 
 export default function Layout() {
   const { insights, data, now, resetSampleData } = useStore();
@@ -25,9 +25,10 @@ export default function Layout() {
     { to: '/', label: 'Home', icon: HomeIcon, end: true, count: newLeads || undefined },
     { to: '/pipeline', label: 'Pipeline', icon: BoardIcon },
     { to: '/contacts', label: 'Contacts', icon: PeopleIcon },
-    { to: '/tours', label: 'Tours', icon: CalendarIcon, count: toursToday || undefined },
+    { to: '/bookings', label: 'Bookings', icon: CalendarIcon, count: toursToday || undefined },
     { to: '/follow-ups', label: 'Follow-ups', icon: BellIcon, count: followUps || undefined },
     { to: '/reports', label: 'Reports', icon: ChartIcon },
+    { to: '/forms', label: 'Forms', icon: FormIcon },
     { to: '/settings', label: 'Settings', icon: CogIcon },
   ];
 

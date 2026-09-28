@@ -117,12 +117,20 @@ export const ACTIVITY_LABEL: Record<ActivityType, string> = {
   tour_no_show: 'Tour no-show',
   tour_cancelled: 'Tour cancelled',
   tour_rescheduled: 'Tour rescheduled',
+  event_booked: 'Event booked',
+  event_moved: 'Event date moved',
+  event_cancelled: 'Event cancelled',
   proposal_sent: 'Proposal sent',
   review_requested: 'Review requested',
   mailchimp_signup: 'Mailchimp signup',
   edm_open: 'EDM opened',
   edm_click: 'EDM link clicked',
 };
+
+export const SPACE_LABEL = {
+  altar_room: 'Altar Room (up to 150)',
+  altar_room_plus: 'Altar Room + second space (160+)',
+} as const;
 
 /** Rules from the Booking Journey Map and Marketing Strategy. */
 export const RULES = {
