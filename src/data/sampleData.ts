@@ -210,7 +210,8 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
       let tourAt: number | null = null;
       switch (target) {
         case 'prospect':
-          enquiredAt = nowMs - rnd.between(1, 170) * DAY;
+          // Two brand-new signups this week, the rest spread over recent months.
+          enquiredAt = nowMs - (k < 2 ? rnd.between(0.3, 3) : rnd.between(8, 170)) * DAY;
           break;
         case 'lead':
           // A few fresh ones, a few waiting too long for a reply, some needing a follow-up.
@@ -296,6 +297,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         createdAt: iso(createdAt),
         reviewRequestedAt: null,
         reviewReceived: false,
+        acknowledgedAt: null,
       };
       contacts.push(contact);
 

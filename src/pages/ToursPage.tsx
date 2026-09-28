@@ -1,48 +1,73 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { format, isToday, isTomorrow } from 'date-fns';
+import { format, isSameDay, isToday, isTomorrow, startOfMonth } from 'date-fns';
 import { useStore } from '../data/store';
 import type { Tour } from '../data/types';
-import { STAGE_LABEL } from '../lib/stages';
-import { formatDate, formatTime, fullName } from '../lib/format';
-import { Empty, OwnerDot, useToast } from '../components/ui';
+import { formatDate } from '../lib/format';
+import { Empty } from '../components/ui';
 import { BookTourModal } from '../components/modals';
+import { RescheduleModal, TourCalendar, TourCard } from '../components/tours';
 import { PlusIcon } from '../components/Icons';
 
+type View = 'calendar' | 'list';
 type Tab = 'upcoming' | 'outcome' | 'past';
 
+function readView(): View {
+  try {
+    return localStorage.getItem('confession-tours-view') === 'list' ? 'list' : 'calendar';
+  } catch {
+    return 'calendar';
+  }
+}
+
+function dayLabel(d: Date) {
+  return isToday(d) ? 'Today' : isTomorrow(d) ? 'Tomorrow' : format(d, 'EEEE');
+}
+
 export default function ToursPage() {
-  const { data, insights, now, setTourStatus } = useStore();
-  const toast = useToast();
+  const { data, now } = useStore();
+  const [view, setView] = useState<View>(readView);
   const [tab, setTab] = useState<Tab>('upcoming');
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [selected, setSelected] = useState(() => new Date());
   const [booking, setBooking] = useState(false);
+  const [moving, setMoving] = useState<Tour | null>(null);
+
+  const pickView = (v: View) => {
+    setView(v);
+    try {
+      localStorage.setItem('confession-tours-view', v);
+    } catch {
+      // ignore
+    }
+  };
 
   const at = (t: Tour) => new Date(t.scheduledFor).getTime();
   const upcoming = data.tours.filter((t) => t.status === 'booked' && at(t) >= now).sort((a, b) => at(a) - at(b));
   const needsOutcome = data.tours.filter((t) => t.status === 'booked' && at(t) < now).sort((a, b) => at(a) - at(b));
   const past = data.tours.filter((t) => t.status !== 'booked').sort((a, b) => at(b) - at(a)).slice(0, 40);
+  const onDay = data.tours.filter((t) => isSameDay(new Date(t.scheduledFor), selected)).sort((a, b) => at(a) - at(b));
 
-  const list = tab === 'upcoming' ? upcoming : tab === 'outcome' ? needsOutcome : past;
-
-  // Group by day.
-  const groups: { day: string; label: string; tours: Tour[] }[] = [];
-  for (const t of list) {
-    const d = new Date(t.scheduledFor);
-    const key = format(d, 'yyyy-MM-dd');
-    let g = groups.find((x) => x.day === key);
-    if (!g) {
-      const label = isToday(d) ? 'Today' : isTomorrow(d) ? 'Tomorrow' : format(d, 'EEEE');
-      g = { day: key, label, tours: [] };
-      groups.push(g);
+  const grouped = (list: Tour[]) => {
+    const groups: { key: string; date: Date; tours: Tour[] }[] = [];
+    for (const t of list) {
+      const d = new Date(t.scheduledFor);
+      const key = format(d, 'yyyy-MM-dd');
+      let g = groups.find((x) => x.key === key);
+      if (!g) groups.push((g = { key, date: d, tours: [] }));
+      g.tours.push(t);
     }
-    g.tours.push(t);
-  }
-
-  const mark = (t: Tour, status: 'attended' | 'no_show' | 'cancelled') => {
-    setTourStatus(t.id, status);
-    const c = insights.get(t.contactId)?.contact;
-    toast(`${c ? c.firstName : 'Tour'}: ${status === 'attended' ? 'attended' : status === 'no_show' ? 'no-show' : 'cancelled'}`);
+    return groups;
   };
+
+  const cards = (list: Tour[], showDate = false) => (
+    <div className="card-grid">
+      {list.map((t) => (
+        <TourCard key={t.id} tour={t} onReschedule={setMoving} showDate={showDate} />
+      ))}
+    </div>
+  );
+
+  const listTours = tab === 'upcoming' ? upcoming : tab === 'outcome' ? needsOutcome : past;
 
   return (
     <div className="page">
@@ -52,90 +77,92 @@ export default function ToursPage() {
           <h1 className="page-title">Tours</h1>
         </div>
         <div className="page-actions">
+          <div className="segmented" role="group" aria-label="View">
+            <button aria-pressed={view === 'calendar'} onClick={() => pickView('calendar')}>
+              Calendar
+            </button>
+            <button aria-pressed={view === 'list'} onClick={() => pickView('list')}>
+              List
+            </button>
+          </div>
           <button className="btn primary" onClick={() => setBooking(true)}>
             <PlusIcon size={16} /> Book a tour
           </button>
         </div>
       </div>
 
-      <div className="segmented" role="group" aria-label="Which tours">
-        <button aria-pressed={tab === 'upcoming'} onClick={() => setTab('upcoming')}>
-          Upcoming ({upcoming.length})
-        </button>
-        <button aria-pressed={tab === 'outcome'} onClick={() => setTab('outcome')}>
-          Needs outcome ({needsOutcome.length})
-        </button>
-        <button aria-pressed={tab === 'past'} onClick={() => setTab('past')}>
-          Past
-        </button>
-      </div>
+      {needsOutcome.length > 0 && (
+        <section className="card attention-card">
+          <div className="card-head">
+            <h2 className="card-title">Needs an outcome</h2>
+            <span className="card-note">These tours have happened. Mark each one attended or no-show</span>
+          </div>
+          {cards(needsOutcome, true)}
+        </section>
+      )}
 
-      <section className="card">
-        {list.length === 0 ? (
-          <Empty title={tab === 'outcome' ? 'Nothing to mark' : 'No tours here'}>
-            {tab === 'outcome' ? 'Every past tour has an outcome.' : 'Book one from a contact or with the button above.'}
-          </Empty>
-        ) : (
-          groups.map((g) => (
-            <div key={g.day}>
-              <div className="day-head">
-                <span className="d">{g.label}</span>
-                <span className="muted small">{formatDate(g.day, 'd MMMM yyyy')}</span>
-                <span className="muted small" style={{ marginLeft: 'auto' }}>
-                  {g.tours.length} {g.tours.length === 1 ? 'tour' : 'tours'}
-                </span>
-              </div>
-              <div className="list">
-                {g.tours.map((t) => {
-                  const i = insights.get(t.contactId);
-                  if (!i) return null;
-                  const c = i.contact;
-                  const ahead = Math.round((new Date(t.scheduledFor).getTime() - new Date(t.bookedAt).getTime()) / 86_400_000);
-                  return (
-                    <div className="list-row" key={t.id} style={{ flexWrap: 'wrap' }}>
-                      <span className="time-chip">{formatTime(t.scheduledFor)}</span>
-                      <div className="grow">
-                        <Link className="title" to={`/contacts/${c.id}`}>
-                          {fullName(c)}
-                          {c.company ? ` · ${c.company}` : ''}
-                        </Link>
-                        <div className="meta">
-                          {data.eventTypes.find((e) => e.id === c.eventTypeId)?.name ?? 'Event TBC'}
-                          {c.guestCount ? ` · ${c.guestCount} guests` : ''} · {STAGE_LABEL[c.stage]} · booked{' '}
-                          {formatDate(t.bookedAt, 'd MMM')} ({ahead} days ahead)
-                          {t.notes ? ` · ${t.notes}` : ''}
-                        </div>
-                      </div>
-                      <OwnerDot id={t.hostId} />
-                      {t.status === 'booked' ? (
-                        <span style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn small" onClick={() => mark(t, 'attended')}>
-                            Attended
-                          </button>
-                          <button className="btn small" onClick={() => mark(t, 'no_show')}>
-                            No-show
-                          </button>
-                          {tab === 'upcoming' && (
-                            <button className="btn small ghost" onClick={() => mark(t, 'cancelled')}>
-                              Cancel
-                            </button>
-                          )}
-                        </span>
-                      ) : (
-                        <span className={`flag ${t.status === 'attended' ? 'good' : t.status === 'no_show' ? 'bad' : 'warn'}`}>
-                          {t.status === 'attended' ? 'Attended' : t.status === 'no_show' ? 'No-show' : 'Cancelled'}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+      {view === 'calendar' ? (
+        <>
+          <section className="card">
+            <TourCalendar
+              tours={data.tours}
+              month={month}
+              onMonth={setMonth}
+              selected={selected}
+              onSelect={(d) => {
+                setSelected(d);
+                if (d.getMonth() !== month.getMonth()) setMonth(startOfMonth(d));
+              }}
+            />
+          </section>
+          <section className="card">
+            <div className="card-head">
+              <h2 className="card-title">
+                {dayLabel(selected)} · {formatDate(selected.getTime(), 'd MMMM')}
+              </h2>
+              <span className="card-note">
+                {onDay.length} {onDay.length === 1 ? 'tour' : 'tours'}
+              </span>
             </div>
-          ))
-        )}
-      </section>
+            {onDay.length === 0 ? <Empty title="No tours this day">Pick another day, or book one.</Empty> : cards(onDay)}
+          </section>
+        </>
+      ) : (
+        <section className="card">
+          <div className="card-head">
+            <div className="segmented" role="group" aria-label="Which tours">
+              <button aria-pressed={tab === 'upcoming'} onClick={() => setTab('upcoming')}>
+                Upcoming ({upcoming.length})
+              </button>
+              <button aria-pressed={tab === 'outcome'} onClick={() => setTab('outcome')}>
+                Needs outcome ({needsOutcome.length})
+              </button>
+              <button aria-pressed={tab === 'past'} onClick={() => setTab('past')}>
+                Past
+              </button>
+            </div>
+          </div>
+          {listTours.length === 0 ? (
+            <Empty title="No tours here">Book one from a contact or with the button above.</Empty>
+          ) : (
+            grouped(listTours).map((g) => (
+              <div key={g.key} className="day-group">
+                <div className="day-head">
+                  <span className="d">{dayLabel(g.date)}</span>
+                  <span className="muted small">{format(g.date, 'd MMMM yyyy')}</span>
+                  <span className="muted small" style={{ marginLeft: 'auto' }}>
+                    {g.tours.length} {g.tours.length === 1 ? 'tour' : 'tours'}
+                  </span>
+                </div>
+                {cards(g.tours)}
+              </div>
+            ))
+          )}
+        </section>
+      )}
 
       {booking && <BookTourModal onClose={() => setBooking(false)} />}
+      {moving && <RescheduleModal tour={moving} onClose={() => setMoving(null)} />}
     </div>
   );
 }

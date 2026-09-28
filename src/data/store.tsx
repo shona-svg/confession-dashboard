@@ -6,7 +6,7 @@ import { generateSampleData } from './sampleData';
 import type { Activity, ActivityType, Contact, Dataset, LostReason, Stage, Tour, TourStatus } from './types';
 import { buildInsights, type Insight } from '../lib/metrics';
 
-const STORAGE_KEY = 'confession-dashboard-sample-v1';
+const STORAGE_KEY = 'confession-dashboard-sample-v2';
 /** Stand-in for "the signed-in team member" until login arrives in phase 3. */
 export const CURRENT_USER_ID = 'tm-sam';
 
@@ -31,7 +31,10 @@ function save(data: Dataset) {
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 const nowIso = () => new Date().toISOString();
 
-export type NewContact = Omit<Contact, 'id' | 'createdAt' | 'lostReason' | 'lostReasonNote' | 'lostFromStage' | 'reviewRequestedAt' | 'reviewReceived'>;
+export type NewContact = Omit<
+  Contact,
+  'id' | 'createdAt' | 'lostReason' | 'lostReasonNote' | 'lostFromStage' | 'reviewRequestedAt' | 'reviewReceived' | 'acknowledgedAt'
+>;
 
 interface StoreValue {
   data: Dataset;
@@ -44,6 +47,8 @@ interface StoreValue {
   logActivity(contactId: string, type: ActivityType, summary: string, occurredAt?: string): void;
   bookTour(contactId: string, scheduledFor: string, hostId: string | null, notes: string): void;
   setTourStatus(tourId: string, status: TourStatus): void;
+  rescheduleTour(tourId: string, scheduledFor: string, hostId: string | null): void;
+  acknowledge(contactId: string): void;
   requestReview(contactId: string): void;
   resetSampleData(): void;
 }
@@ -129,6 +134,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         lostFromStage: null,
         reviewRequestedAt: null,
         reviewReceived: false,
+        acknowledgedAt: null,
       };
       return {
         ...d,
@@ -197,8 +203,37 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (status === 'attended' && c && ['prospect', 'lead', 'tour_booked'].includes(c.stage)) {
         next = withStage(next, tour.contactId, 'toured');
       }
+      // A cancelled tour with nothing else booked puts them back to Lead.
+      const otherBooked = d.tours.some((x) => x.id !== tourId && x.contactId === tour.contactId && x.status === 'booked');
+      if (status === 'cancelled' && c?.stage === 'tour_booked' && !otherBooked) {
+        next = withStage(next, tour.contactId, 'lead');
+      }
       return next;
     });
+  }, []);
+
+  const rescheduleTour = useCallback((tourId: string, scheduledFor: string, hostId: string | null) => {
+    setData((d) => {
+      const tour = d.tours.find((x) => x.id === tourId);
+      if (!tour) return d;
+      const fmt = (iso: string) =>
+        new Date(iso).toLocaleString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+      return {
+        ...d,
+        tours: d.tours.map((x) => (x.id === tourId ? { ...x, scheduledFor, hostId, status: 'booked' } : x)),
+        activities: [
+          ...d.activities,
+          activity(tour.contactId, 'tour_rescheduled', `Moved from ${fmt(tour.scheduledFor)} to ${fmt(scheduledFor)}`),
+        ],
+      };
+    });
+  }, []);
+
+  const acknowledge = useCallback((contactId: string) => {
+    setData((d) => ({
+      ...d,
+      contacts: d.contacts.map((c) => (c.id === contactId ? { ...c, acknowledgedAt: nowIso() } : c)),
+    }));
   }, []);
 
   const requestReview = useCallback((contactId: string) => {
@@ -226,6 +261,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     logActivity,
     bookTour,
     setTourStatus,
+    rescheduleTour,
+    acknowledge,
     requestReview,
     resetSampleData,
   };

@@ -14,6 +14,7 @@ export default function Layout() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  const newLeads = [...insights.values()].filter((i) => i.isNew).length;
   const followUps = [...insights.values()].filter((i) => i.followUpDue || i.replyOverdue).length;
   const toursToday = data.tours.filter((t) => {
     const d = new Date(t.scheduledFor);
@@ -21,7 +22,7 @@ export default function Layout() {
   }).length;
 
   const links = [
-    { to: '/', label: 'Home', icon: HomeIcon, end: true },
+    { to: '/', label: 'Home', icon: HomeIcon, end: true, count: newLeads || undefined },
     { to: '/pipeline', label: 'Pipeline', icon: BoardIcon },
     { to: '/contacts', label: 'Contacts', icon: PeopleIcon },
     { to: '/tours', label: 'Tours', icon: CalendarIcon, count: toursToday || undefined },

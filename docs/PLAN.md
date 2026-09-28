@@ -319,3 +319,39 @@ contacts" button could be added later if that turns out to happen often.
    into Netlify.
 6. **Mailchimp**: you create an API key and paste it into Netlify.
 7. **README**
+
+---
+
+## 8. Automations requested after phase 2 (proposed, needs decisions)
+
+These go beyond the original "read-only" rule, so each needs an explicit yes before it's built.
+
+### Google Calendar (tours)
+- **Recommended:** when a tour is booked, rescheduled or cancelled in the dashboard, a Netlify
+  Function creates, moves or deletes the event on the venue manager's Google Calendar
+  (Google Calendar API). Setup depends on whether the venue uses Google Workspace or a personal Gmail.
+- **Optional:** add the client as a guest on that event. Google then sends them the invite,
+  updates it when the tour moves and cancels it if it's cancelled. This gives a free, automatic
+  confirmation, but it looks like a calendar invite rather than a branded email.
+- A read-only "subscribe to calendar" feed is simpler but Google only refreshes those every
+  few hours, which is too slow for tours.
+
+### Tour confirmation and reminder emails
+- The dashboard itself still never sends email. It would pass the tour details to the tool
+  that sends the email:
+  - **HubSpot:** set "tour date/time" properties on the contact; a HubSpot workflow sends
+    the confirmation and a reminder the day before. Needs a HubSpot plan that includes workflows.
+  - **Mailchimp:** Mailchimp is built for marketing to subscribers. One-off confirmations to
+    people who haven't opted in belong in Mailchimp Transactional (a paid add-on), not a normal
+    audience journey.
+- Recommendation: HubSpot workflows if the plan allows, because HubSpot already owns client
+  email. Otherwise use the Google Calendar guest invite.
+
+### Built in the preview already
+- New leads section on Home (unactioned HubSpot enquiries and this week's Mailchimp signups).
+- Client journey map on each profile, following the Client Journey A3.
+- Tours: calendar view by default, list view with cards, reschedule and cancel.
+  Cancelling the only booked tour moves the contact back to Lead.
+
+### Later
+- Drag-and-drop on the client journey map itself (e.g. said yes → booked → paid).

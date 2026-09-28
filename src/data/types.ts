@@ -68,6 +68,8 @@ export interface Contact {
   createdAt: string; // ISO date-time
   reviewRequestedAt: string | null;
   reviewReceived: boolean;
+  /** Set when someone marks a new enquiry as seen without needing to reply. */
+  acknowledgedAt: string | null;
 }
 
 export interface StageChange {
@@ -101,6 +103,7 @@ export type ActivityType =
   | 'tour_attended'
   | 'tour_no_show'
   | 'tour_cancelled'
+  | 'tour_rescheduled'
   | 'proposal_sent'
   | 'review_requested'
   | 'mailchimp_signup'

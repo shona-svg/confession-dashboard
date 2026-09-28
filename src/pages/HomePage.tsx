@@ -8,6 +8,7 @@ import { Funnel } from '../components/charts';
 import { Empty, Flags, OwnerDot, StatusTag } from '../components/ui';
 import { BookTourModal, ContactFormModal } from '../components/modals';
 import { PlusIcon } from '../components/Icons';
+import { NewLeads } from '../components/NewLeads';
 import { format, isToday, isTomorrow } from 'date-fns';
 
 export default function HomePage() {
@@ -50,6 +51,8 @@ export default function HomePage() {
           </button>
         </div>
       </div>
+
+      <NewLeads />
 
       <section className="kpis" aria-label="This week at a glance">
         <div className="kpi feature">

@@ -35,6 +35,27 @@ describe('sample data', () => {
   });
 });
 
+describe('new leads', () => {
+  it('lists unactioned enquiries and this week’s signups, not everyone', () => {
+    const fresh = [...insights.values()].filter((i) => i.isNew);
+    expect(fresh.filter((i) => i.contact.stage === 'lead')).toHaveLength(4);
+    expect(fresh.every((i) => !i.teamTouched)).toBe(true);
+    expect(fresh.length).toBeLessThan(10);
+  });
+
+  it('drops a lead once the team has replied', () => {
+    const lead = [...insights.values()].find((i) => i.isNew && i.contact.stage === 'lead')!;
+    const replied = {
+      ...data,
+      activities: [
+        ...data.activities,
+        { id: 'x', contactId: lead.contact.id, type: 'email_out' as const, occurredAt: new Date(NOW).toISOString(), summary: 'Hi', createdBy: 'tm-sam' },
+      ],
+    };
+    expect(buildInsights(replied, NOW).get(lead.contact.id)!.isNew).toBe(false);
+  });
+});
+
 describe('rules', () => {
   it('derives status from stage', () => {
     expect(statusOf('prospect')).toBe('Prospect');

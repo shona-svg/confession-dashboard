@@ -14,6 +14,9 @@ import {
 import { formatDate, formatDateTime, formatHours, formatMoney, fullName, timeAgo, daysUntil } from '../lib/format';
 import { Empty, Flags, OwnerDot, StageNum, StatusTag, useToast } from '../components/ui';
 import { BookTourModal, ContactFormModal, LogActivityModal, LostModal } from '../components/modals';
+import { ClientJourney } from '../components/ClientJourney';
+import { RescheduleModal, TourCard } from '../components/tours';
+import type { Tour } from '../data/types';
 import {
   CalendarIcon,
   CursorIcon,
@@ -61,12 +64,14 @@ export default function ContactPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const store = useStore();
-  const { data, insights, moveStage, updateContact, setTourStatus, requestReview, deleteContact } = store;
+  const { data, insights, moveStage, updateContact, requestReview, deleteContact } = store;
   const teamName = useTeamName();
   const toast = useToast();
   const [modal, setModal] = useState<ModalKind | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [newTag, setNewTag] = useState('');
+  const [tab, setTab] = useState<'overview' | 'journey'>('overview');
+  const [moving, setMoving] = useState<Tour | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'team' | 'client' | 'stages'>('all');
 
   const insight = id ? insights.get(id) : undefined;
@@ -173,7 +178,7 @@ export default function ContactPage() {
 
       <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div className="card-head" style={{ marginBottom: 0 }}>
-          <h2 className="card-title">Journey</h2>
+          <h2 className="card-title">Stage</h2>
           {c.stage === 'lost' ? (
             <button className="btn small" onClick={() => goTo(c.lostFromStage && c.lostFromStage !== 'lost' ? c.lostFromStage : 'lead')}>
               Reopen
@@ -211,6 +216,26 @@ export default function ContactPage() {
         </div>
       </section>
 
+      <div className="segmented profile-tabs" role="tablist" aria-label="Profile sections">
+        <button role="tab" aria-selected={tab === 'overview'} aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}>
+          Overview
+        </button>
+        <button role="tab" aria-selected={tab === 'journey'} aria-pressed={tab === 'journey'} onClick={() => setTab('journey')}>
+          Client journey
+        </button>
+      </div>
+
+      {tab === 'journey' && (
+        <section className="card">
+          <div className="card-head">
+            <h2 className="card-title">Client journey</h2>
+            <span className="card-note">From Confession's Client Journey map. Ticks fill in as things happen</span>
+          </div>
+          <ClientJourney insight={insight} />
+        </section>
+      )}
+
+      {tab === 'overview' && (
       <div className="grid-2" style={{ alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <section className="card">
@@ -307,41 +332,10 @@ export default function ContactPage() {
             {insight.tours.length === 0 ? (
               <p className="muted small">No tours yet.</p>
             ) : (
-              <div className="list">
-                {[...insight.tours].reverse().map((t) => {
-                  const past = new Date(t.scheduledFor).getTime() < Date.now();
-                  const leadDays = Math.round((new Date(t.scheduledFor).getTime() - new Date(t.bookedAt).getTime()) / 86_400_000);
-                  return (
-                    <div className="list-row" key={t.id} style={{ flexWrap: 'wrap' }}>
-                      <div className="grow">
-                        <div className="title">{formatDateTime(t.scheduledFor)}</div>
-                        <div className="meta">
-                          Booked {formatDate(t.bookedAt, 'd MMM')} ({leadDays} days ahead) · host {teamName(t.hostId)}
-                        </div>
-                      </div>
-                      {t.status === 'booked' ? (
-                        <span style={{ display: 'flex', gap: 6 }}>
-                          {past && <span className="flag warn">Needs outcome</span>}
-                          <button className="btn small" onClick={() => setTourStatus(t.id, 'attended')}>
-                            Attended
-                          </button>
-                          <button className="btn small" onClick={() => setTourStatus(t.id, 'no_show')}>
-                            No-show
-                          </button>
-                          {!past && (
-                            <button className="btn small ghost" onClick={() => setTourStatus(t.id, 'cancelled')}>
-                              Cancel
-                            </button>
-                          )}
-                        </span>
-                      ) : (
-                        <span className={`flag ${t.status === 'attended' ? 'good' : t.status === 'no_show' ? 'bad' : 'warn'}`}>
-                          {t.status === 'attended' ? 'Attended' : t.status === 'no_show' ? 'No-show' : 'Cancelled'}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="card-grid narrow">
+                {[...insight.tours].reverse().map((t) => (
+                  <TourCard key={t.id} tour={t} onReschedule={setMoving} showDate />
+                ))}
               </div>
             )}
           </section>
@@ -458,6 +452,9 @@ export default function ContactPage() {
         </section>
       </div>
 
+      )}
+
+      {moving && <RescheduleModal tour={moving} onClose={() => setMoving(null)} />}
       {modal?.kind === 'log' && <LogActivityModal contact={c} initialType={modal.type} onClose={() => setModal(null)} />}
       {modal?.kind === 'tour' && <BookTourModal contact={c} onClose={() => setModal(null)} />}
       {modal?.kind === 'edit' && <ContactFormModal contact={c} onClose={() => setModal(null)} />}

@@ -37,6 +37,10 @@ export interface Insight {
   followUpDue: boolean;
   daysSinceContact: number | null;
   overCapacity: boolean;
+  /** Arrived from a form or signup and nobody on the team has actioned it yet. */
+  isNew: boolean;
+  teamTouched: boolean;
+  arrivedAt: number;
 }
 
 export function buildInsights(data: Dataset, now = Date.now()): Map<string, Insight> {
@@ -60,6 +64,9 @@ export function buildInsights(data: Dataset, now = Date.now()): Map<string, Insi
       followUpDue: false,
       daysSinceContact: null,
       overCapacity: (c.guestCount ?? 0) > RULES.altarRoomCapacity,
+      isNew: false,
+      teamTouched: false,
+      arrivedAt: t(c.createdAt),
     });
   }
 
@@ -69,6 +76,7 @@ export function buildInsights(data: Dataset, now = Date.now()): Map<string, Insi
     const at = t(sc.changedAt);
     if (i.reachedAt[sc.toStage] === undefined || at < i.reachedAt[sc.toStage]!) i.reachedAt[sc.toStage] = at;
     if (sc.toStage !== 'lost') i.highestIndex = Math.max(i.highestIndex, stageIndex(sc.toStage));
+    if (isTeam(sc.changedBy)) i.teamTouched = true;
   }
 
   for (const tour of data.tours) {
@@ -90,6 +98,7 @@ export function buildInsights(data: Dataset, now = Date.now()): Map<string, Insi
     const i = byContact.get(a.contactId);
     if (!i) continue;
     const at = t(a.occurredAt);
+    if (isTeam(a.createdBy)) i.teamTouched = true;
     if (REPLY_TYPES.includes(a.type) && i.enquiredAt !== null && at >= i.enquiredAt && i.firstReplyAt === null) {
       i.firstReplyAt = at;
     }
@@ -103,6 +112,12 @@ export function buildInsights(data: Dataset, now = Date.now()): Map<string, Insi
     const c = i.contact;
     const lastTouch = Math.max(i.lastContactAt ?? 0, i.enquiredAt ?? 0) || null;
     i.daysSinceContact = lastTouch ? Math.floor((now - lastTouch) / DAY) : null;
+    const arrived = i.enquiredAt ?? i.arrivedAt;
+    i.arrivedAt = arrived;
+    i.isNew =
+      !i.teamTouched &&
+      !c.acknowledgedAt &&
+      (c.stage === 'lead' || (c.stage === 'prospect' && now - arrived < RULES.newSignupDays * DAY));
     if (i.isOpen) {
       i.awaitingReply = i.enquiredAt !== null && i.firstReplyAt === null;
       i.replyOverdue = i.awaitingReply && now - i.enquiredAt! > RULES.replyWithinHours * HOUR;
@@ -372,6 +387,11 @@ export function weekdayWeekend(insights: Map<string, Insight>, r: Range) {
 }
 
 // ---------- helpers ----------
+
+/** Team member ids start with "tm-"; anything else is a sync or automatic change. */
+export function isTeam(by: string): boolean {
+  return by.startsWith('tm-');
+}
 
 export function sum(values: (number | null | undefined)[]): number {
   return values.reduce<number>((a, b) => a + (b ?? 0), 0);

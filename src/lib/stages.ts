@@ -116,6 +116,7 @@ export const ACTIVITY_LABEL: Record<ActivityType, string> = {
   tour_attended: 'Tour attended',
   tour_no_show: 'Tour no-show',
   tour_cancelled: 'Tour cancelled',
+  tour_rescheduled: 'Tour rescheduled',
   proposal_sent: 'Proposal sent',
   review_requested: 'Review requested',
   mailchimp_signup: 'Mailchimp signup',
@@ -129,4 +130,6 @@ export const RULES = {
   replyWithinHours: 24,
   proposalWithinHours: 48,
   altarRoomCapacity: 150,
+  /** Mailchimp signups show as new for this many days if nobody actions them. */
+  newSignupDays: 7,
 };

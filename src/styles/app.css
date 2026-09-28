@@ -1563,3 +1563,506 @@ table.data tfoot td {
   font-size: 12px;
   color: var(--text-3);
 }
+
+/* ---------- Shared card grid (tours, new leads) ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.card-grid.narrow {
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+.day-group + .day-group {
+  margin-top: 8px;
+}
+
+.day-group .card-grid {
+  margin-top: 12px;
+}
+
+.tour-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* Tour cards */
+
+.tour-card {
+  cursor: default;
+  touch-action: auto;
+  user-select: auto;
+  border-left: 4px solid var(--accent);
+}
+
+.tour-card.status-attended {
+  border-left-color: var(--good);
+}
+
+.tour-card.status-no_show {
+  border-left-color: var(--bad);
+}
+
+.tour-card.status-cancelled {
+  border-left-color: var(--line-strong);
+  opacity: 0.75;
+}
+
+.tour-card.needs {
+  border-left-color: var(--warn);
+}
+
+.tour-time {
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  color: var(--accent);
+}
+
+.tour-day {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--pink-ink);
+  margin-bottom: 2px;
+}
+
+.tour-notes {
+  font-style: italic;
+}
+
+.flag.tour-booked {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.flag.plain-flag {
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+.attention-card {
+  border-color: var(--warn);
+}
+
+/* ---------- Calendar ---------- */
+
+.cal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.cal-dow {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 4px 6px;
+}
+
+.cal-day {
+  position: relative;
+  min-height: 104px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  padding: 6px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  min-width: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cal-day:hover {
+  border-color: var(--accent);
+}
+
+.cal-day.other {
+  background: var(--surface-2);
+  color: var(--text-3);
+}
+
+.cal-day.today .cal-num {
+  background: var(--pink);
+  color: #252466;
+}
+
+.cal-day.selected {
+  border: 2px solid var(--accent);
+  padding: 5px;
+}
+
+.cal-num {
+  font-weight: 700;
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.cal-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cal-chip {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cal-chip.status-attended {
+  background: var(--good-bg);
+  color: var(--good);
+}
+
+.cal-chip.status-no_show {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.cal-chip.status-cancelled {
+  background: var(--surface-2);
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.cal-more {
+  font-size: 11px;
+  color: var(--text-3);
+  padding-left: 4px;
+}
+
+.cal-dot {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .cal-day {
+    min-height: 52px;
+    align-items: center;
+    padding: 4px;
+  }
+
+  .cal-day.selected {
+    padding: 3px;
+  }
+
+  .cal-chips {
+    display: none;
+  }
+
+  .cal-dot {
+    display: grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 10.5px;
+    font-weight: 700;
+  }
+
+  .cal-dow {
+    padding: 4px 2px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+}
+
+/* ---------- New leads (home) ---------- */
+
+.new-leads {
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow);
+}
+
+.new-leads-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px 24px;
+}
+
+.eyebrow.on-dark {
+  color: var(--pink);
+}
+
+.new-leads-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 40px;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.new-count {
+  background: var(--pink);
+  color: #252466;
+  font-size: 22px;
+  border-radius: 999px;
+  padding: 4px 12px 2px;
+  line-height: 1;
+}
+
+.new-leads-note {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 12.5px;
+  color: #cfcdee;
+}
+
+.new-leads-empty {
+  margin: 0;
+  color: #cfcdee;
+}
+
+.new-card {
+  cursor: default;
+  touch-action: auto;
+  user-select: auto;
+  color: var(--text);
+}
+
+.new-card.late {
+  box-shadow: inset 0 0 0 2px var(--bad);
+}
+
+.new-name {
+  font-size: 16px;
+}
+
+.new-wait {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.new-wait.late {
+  color: var(--bad);
+}
+
+/* ---------- Profile tabs + client journey ---------- */
+
+.profile-tabs {
+  align-self: flex-start;
+}
+
+.cj {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cj-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.cj-next.overdue {
+  background: var(--bad-bg);
+  color: var(--bad);
+}
+
+.cj-next.lost {
+  background: var(--surface-2);
+  color: var(--text-2);
+}
+
+.cj-next-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.cj-phases {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .cj-phases {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .cj-phases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cj-phase {
+  border-radius: var(--radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Phase tints follow the Client Journey A3: pink, blue, green, pink. */
+.ph-aware,
+.ph-loyal {
+  background: var(--pink-soft);
+}
+
+.ph-consider {
+  background: var(--accent-soft);
+}
+
+.ph-convert {
+  background: var(--good-bg);
+}
+
+.cj-phase-name {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.cj-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cj-step {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  border: 1px solid transparent;
+}
+
+.cj-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.cj-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.cj-title {
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.cj-meta {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.cj-step.done .cj-mark {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--pink);
+}
+
+.cj-step.current {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--pink);
+}
+
+.cj-step.current .cj-mark {
+  border-color: var(--pink);
+  background: var(--pink);
+}
+
+.cj-step.upcoming,
+.cj-step.stopped {
+  opacity: 0.6;
+}
+
+.cj-step.skipped {
+  opacity: 0.55;
+}
+
+.cj-step.skipped .cj-title {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
