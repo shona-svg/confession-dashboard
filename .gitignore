@@ -1,0 +1,8 @@
+node_modules
+dist
+dist-preview
+.env
+.env.*
+!.env.example
+.netlify
+*.tsbuildinfo

@@ -46,6 +46,15 @@ and Audience Persona brief:
   have a little of the brand's cheek ("Confessions this week") but stays in functions
   language, not nightlife language.
 
+### Decisions confirmed after phase 1
+- Follow-up list: open leads with no contact in **5+ days** (calls, emails and tours count; notes don't).
+- Pricing is **TBC**. Estimated value is typed in by hand for now, and no hire fees are assumed.
+- Event types as listed in section 2 are confirmed.
+- Fonts: **Bebas Neue + Montserrat** only (no Golden Hopes).
+- The 2023 logo is current.
+- Team members: to be confirmed. The preview uses three made-up names.
+- Confirmed events move to Event held automatically the day after the event date (can be switched off).
+
 ---
 
 ## 1. How it fits together
@@ -84,7 +93,7 @@ and Audience Persona brief:
 | Piece | Tool | Why |
 |---|---|---|
 | Website | React + TypeScript, built with Vite | A standard, well-supported way to build an app-like website |
-| Charts | Recharts | Straightforward charts for the reports |
+| Charts | Drawn directly in the page (no chart library) | Exact brand colours, light and fast |
 | Drag and drop | dnd-kit | Moving cards on the pipeline board, works on touch screens too |
 | Styling | Hand-written CSS using Confession's colours and fonts | So it looks like Confession, not a generic template |
 | Database + login | Supabase (Sydney region) | Keeps customer data in Australia |
