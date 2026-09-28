@@ -87,6 +87,7 @@ export default function ContactPage() {
   const [tab, setTab] = useState<'overview' | 'journey'>('overview');
   const [moving, setMoving] = useState<Tour | null>(null);
   const [editingEvent, setEditingEvent] = useState<VenueEvent | null>(null);
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'team' | 'client' | 'stages'>('all');
 
   const insight = id ? insights.get(id) : undefined;
@@ -529,10 +530,17 @@ export default function ContactPage() {
                       <div className="what">{item.title}</div>
                       {item.body && <div>{item.body}</div>}
                       {item.detail && (
-                        <details className="email-detail">
-                          <summary>Show email</summary>
-                          <pre>{item.detail}</pre>
-                        </details>
+                        <div className="email-detail">
+                          <button
+                            type="button"
+                            className="link-btn small"
+                            aria-expanded={openEmail === item.id}
+                            onClick={() => setOpenEmail(openEmail === item.id ? null : item.id)}
+                          >
+                            {openEmail === item.id ? 'Hide email' : 'Show email'}
+                          </button>
+                          {openEmail === item.id && <div className="email-text">{item.detail}</div>}
+                        </div>
                       )}
                       <div className="when">
                         {formatDateTime(item.at)} · {whoLabel(item.by)}

@@ -19,7 +19,7 @@ describe('email templates', () => {
   it('suggests the template that fits the stage', () => {
     expect(suggestedTemplate('lead', false, false)).toBe('first_reply');
     expect(suggestedTemplate('proposal_sent', false, true)).toBe('proposal_follow_up');
-    expect(suggestedTemplate('event_held', false, true)).toBe('review_request');
+    expect(suggestedTemplate('event_held', false, true)).toBe('thank_you');
   });
 });
 

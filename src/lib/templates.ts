@@ -8,7 +8,7 @@ export interface EmailTemplate {
   when: string;
   subject: string;
   body: string;
-  isReviewRequest?: boolean;
+  asksForGoogleReview?: boolean;
 }
 
 export const TEMPLATES: EmailTemplate[] = [
@@ -82,7 +82,7 @@ If the timing's changed or you've gone another way, no worries at all. Just let 
 {{senderFirstName}}`,
   },
   {
-    id: 'review_request',
+    id: 'thank_you',
     name: 'Thank you and review request',
     when: 'A few days after the event',
     subject: 'Thank you, and a small favour',
@@ -95,7 +95,7 @@ If you have a minute, a Google review would mean the world to a small venue like
 And if you have photos you're happy to share, we'd love to see them.
 
 {{senderFirstName}}`,
-    isReviewRequest: true,
+    asksForGoogleReview: true,
   },
   {
     id: 'blank',
@@ -122,7 +122,7 @@ export function suggestedTemplate(stage: Stage, hasUpcomingTour: boolean, replie
     case 'proposal_sent':
       return 'proposal_follow_up';
     case 'event_held':
-      return 'review_request';
+      return 'thank_you';
     default:
       return 'blank';
   }

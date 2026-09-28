@@ -93,7 +93,7 @@ interface StoreValue {
   bookEvent(contactId: string, input: EventInput): void;
   updateEvent(eventId: string, patch: Partial<EventInput>): void;
   submitEnquiry(input: EnquiryInput): string;
-  sendEmail(contactId: string, email: { fromId: string; subject: string; body: string; isReviewRequest?: boolean }): void;
+  sendEmail(contactId: string, email: { fromId: string; subject: string; body: string; asksForGoogleReview?: boolean }): void;
   requestReview(contactId: string): void;
   resetSampleData(): void;
 }
@@ -430,7 +430,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const sendEmail = useCallback(
-    (contactId: string, email: { fromId: string; subject: string; body: string; isReviewRequest?: boolean }) => {
+    (contactId: string, email: { fromId: string; subject: string; body: string; asksForGoogleReview?: boolean }) => {
       setData((d) => {
         const at = nowIso();
         const sent: Activity = {
@@ -444,7 +444,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         };
         return {
           ...d,
-          contacts: email.isReviewRequest
+          contacts: email.asksForGoogleReview
             ? d.contacts.map((c) => (c.id === contactId ? { ...c, reviewRequestedAt: c.reviewRequestedAt ?? at } : c))
             : d.contacts,
           activities: [...d.activities, sent],

@@ -2332,14 +2332,7 @@ pre.code {
   margin-top: 4px;
 }
 
-.email-detail summary {
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--pink-ink);
-}
-
-.email-detail pre {
+.email-text {
   white-space: pre-wrap;
   font-family: var(--font-body);
   font-size: 13px;

@@ -39,7 +39,7 @@ export function EmailComposer({ contact, initialTemplate, onClose }: { contact: 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const t = TEMPLATES.find((x) => x.id === templateId);
-    sendEmail(contact.id, { fromId, subject: subject.trim(), body, isReviewRequest: t?.isReviewRequest });
+    sendEmail(contact.id, { fromId, subject: subject.trim(), body, asksForGoogleReview: t?.asksForGoogleReview });
     toast(`Email to ${contact.firstName} saved to the timeline (preview, not actually sent)`);
     onClose();
   };
