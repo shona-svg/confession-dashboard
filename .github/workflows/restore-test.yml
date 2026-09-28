@@ -1,0 +1,75 @@
+# Once a month: prove the backups work by restoring the newest one into the separate
+# TEST database and checking every table came back complete. Also catches the nightly
+# backup quietly stopping (the newest copy must be under 36 hours old).
+name: Monthly restore test
+
+on:
+  schedule:
+    - cron: '0 17 2 * *' # 2nd of each month, about 3:30am in Adelaide
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  restore-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RESTORE_DATABASE_URL: ${{ secrets.TEST_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      BACKUP_REMOTE: 'gdrive:'
+      RCLONE_CONFIG_GDRIVE_TYPE: drive
+      RCLONE_CONFIG_GDRIVE_SCOPE: drive
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${{ secrets.GDRIVE_SHARED_DRIVE_ID }}
+      ALERT_SMTP_USER: ${{ secrets.ALERT_SMTP_USER }}
+      ALERT_SMTP_APP_PASSWORD: ${{ secrets.ALERT_SMTP_APP_PASSWORD }}
+      ALERT_TO: ${{ secrets.ALERT_TO }}
+    steps:
+      - name: Check the restore test has been set up
+        id: setup
+        run: |
+          if [ -z "$RESTORE_DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ] || [ -z "$RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS" ]; then
+            echo "Restore test isn't set up yet (secrets missing). Skipping." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.setup.outputs.ready == 'true'
+
+      - name: Install database and Drive tools
+        if: steps.setup.outputs.ready == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common rclone
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Restore the newest backup into the test database
+        if: steps.setup.outputs.ready == 'true'
+        run: scripts/backup/restore-test.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Email the result
+        if: steps.setup.outputs.ready == 'true' && success() && env.ALERT_TO != ''
+        run: |
+          scripts/alerts/send-email.sh "Confession dashboard: monthly backup check passed" \
+            "This month's test restore worked: the newest backup was downloaded, decrypted and restored in full into the test database.
+
+          Details: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Email an alert if the check failed
+        if: failure() && env.ALERT_TO != ''
+        run: |
+          scripts/alerts/send-email.sh "ACTION NEEDED: Confession dashboard backup check failed" \
+            "The monthly test restore did not pass. The backups may not be usable until this is fixed.
+          Your live data is not affected.
+
+          See what went wrong: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

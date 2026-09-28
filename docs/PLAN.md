@@ -395,7 +395,8 @@ These go beyond the original "read-only" rule, so each needs an explicit yes bef
 New contact fields: `accessibility_needs` (sensitive, only shown inside the dashboard) and `marketing_consent`.
 
 ### Revised phases
-3. Supabase database + Google sign-in (Workspace only), replacing sample data.
+3. Supabase database + Google sign-in (Workspace only), replacing sample data, with the data-safety
+   protections in [DATA-SAFETY.md](DATA-SAFETY.md) in place before any real data goes in.
 4. Deploy to Netlify; the enquiry form goes live for WordPress.
 5. Import existing contacts from a HubSpot export (with a preview and duplicate check first).
 6. Mailchimp two-way sync.

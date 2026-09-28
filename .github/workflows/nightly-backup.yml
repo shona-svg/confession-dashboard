@@ -1,0 +1,90 @@
+# Every night: export the database, encrypt it, store it on the restricted Google Drive,
+# check it arrived intact, then empty the 30-day bin. Emails the venue manager and EA if
+# anything fails, plus a short "all good" summary every Monday.
+# How to set it up: docs/DATA-SAFETY.md
+name: Nightly backup
+
+on:
+  schedule:
+    - cron: '30 15 * * *' # 1:00am ACST / 2:00am ACDT in Adelaide
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+      BACKUP_REMOTE: 'gdrive:'
+      RCLONE_CONFIG_GDRIVE_TYPE: drive
+      RCLONE_CONFIG_GDRIVE_SCOPE: drive
+      RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
+      RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${{ secrets.GDRIVE_SHARED_DRIVE_ID }}
+      ALERT_SMTP_USER: ${{ secrets.ALERT_SMTP_USER }}
+      ALERT_SMTP_APP_PASSWORD: ${{ secrets.ALERT_SMTP_APP_PASSWORD }}
+      ALERT_TO: ${{ secrets.ALERT_TO }}
+    steps:
+      - name: Check backups have been set up
+        id: setup
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ] || [ -z "$RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS" ]; then
+            echo "Backups aren't set up yet (secrets missing). Skipping." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.setup.outputs.ready == 'true'
+
+      - name: Install database and Drive tools
+        if: steps.setup.outputs.ready == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common rclone
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
+
+      - name: Back up the database
+        if: steps.setup.outputs.ready == 'true'
+        run: scripts/backup/backup.sh
+
+      - name: Store it on Google Drive and check it arrived
+        if: steps.setup.outputs.ready == 'true'
+        run: scripts/backup/upload.sh
+
+      - name: Empty the bin (only after the backup is safely stored)
+        if: steps.setup.outputs.ready == 'true'
+        run: |
+          n="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "select public.purge_bin()")"
+          echo "Contacts permanently removed from the bin (older than 30 days): $n" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Monday summary
+        if: steps.setup.outputs.ready == 'true' && github.event_name == 'schedule' && env.ALERT_TO != ''
+        run: |
+          if [ "$(TZ=Australia/Adelaide date +%u)" = "1" ]; then
+            count="$(rclone lsf gdrive:daily --include 'confession-20*.dump.gpg' | wc -l)"
+            scripts/alerts/send-email.sh "Confession dashboard: backups are running" \
+              "All good. Last night's backup was stored on the Google Drive, and there are $count nightly copies kept.
+
+          Details: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          fi
+
+      - name: Email an alert if anything failed
+        if: failure() && env.ALERT_TO != ''
+        run: |
+          scripts/alerts/send-email.sh "ACTION NEEDED: Confession dashboard backup failed" \
+            "Last night's backup did not complete, so it may not be on the Google Drive.
+          Earlier backups are safe and unchanged, and the bin was not emptied.
+
+          See what went wrong: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          You can re-run it from that page once it's fixed."
