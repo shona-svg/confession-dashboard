@@ -1,9 +1,27 @@
 # Brand files
 
-Put Confession's brand files in this folder so the dashboard can use them:
+Taken from *Confession Brand Guidelines 2023* (ARK Design).
 
-- Logo files (SVG is best, PNG is fine), including a light and a dark version if you have them
-- Font files, or the names of the fonts if they're from Google Fonts or Adobe Fonts
-- A brand guide PDF, if you have one
+| File | Use |
+|---|---|
+| `confession-logo-blue.svg` | Primary wordmark, St Patricks Blue, for light backgrounds |
+| `confession-logo-white.svg` | Primary wordmark, white, for navy backgrounds |
+| `confession-icon-blue.svg` / `confession-icon-pink.svg` | The cross-in-circle mark (browser tab icon, small spaces) |
 
-You can upload them on GitHub: open this folder, click **Add file > Upload files**.
+The SVGs were extracted directly from the vector artwork in the brand guide PDF.
+
+## Colours
+| Name | Hex | Notes |
+|---|---|---|
+| St Patricks Blue | `#252466` | Primary |
+| Amaranth Pink | `#F391BC` | Primary accent. Complementary pink tints may accent headlines |
+| Rich Black | `#25282A` | Pantone 426C |
+
+## Fonts
+- **Bebas Neue** (Regular 400): headings. Free on Google Fonts.
+- **Montserrat** (Regular and Bold): body text. Free on Google Fonts.
+- **Golden Hopes**: script secondary heading, used sparingly. This is a commercial font.
+  To use it in the dashboard, upload the licensed web font file (.woff2 or .otf) here.
+
+## Adding more files
+Upload on GitHub: open this folder, then click **Add file > Upload files**.

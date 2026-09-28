@@ -7,6 +7,47 @@ matching question in the "Questions" section at the end.
 
 ---
 
+## 0. What the Confession documents changed
+
+Based on the brand guidelines, Client Journey, Booking Journey Map, Marketing Strategy
+and Audience Persona brief:
+
+- **The venue:** CONFESSION, 60 Marryatt Street, Port Adelaide SA 5015. A reclaimed 1850s
+  church, one event at a time. The Altar Room (up to 150 guests) is the standard offer. A
+  second space is only a costed exception for 160+ confirmed guests.
+- **Audience segment field added.** Every contact is tagged as *Milestone & Celebration*,
+  *Corporate* or *Accessibility-led*. The strategy says to track bookings and conversion by
+  segment, so the reports include a "by audience" view alongside "by event type".
+- **Event types follow the strategy:** celebration, not ceremony. Wedding enquiries are
+  *wedding after-party / reception kick-on*. 18ths and hens/bucks aren't marketed to, but
+  they can still be logged (and marked Lost) if they enquire.
+- **KPIs from the Marketing Strategy become report targets:**
+  - Enquiry response time: same business day, always within 24 hours. Contacts over 24
+    hours without a reply are flagged in red.
+  - Proposal turnaround: 24–48 hours after the tour. A new "tour to proposal sent" speed
+    metric, with overdue proposals flagged.
+  - Tour booking rate, tour to proposal to booking conversion (split by audience).
+  - Weekday vs weekend bookings.
+- **Guest counts over 150** get a "second-room conversation" flag, matching the Booking
+  Journey Map.
+- **Post-event tracking (proposed):** a "review requested" date and a "review received" tick
+  on Event held contacts. The strategy calls the thin review base "the single most fixable
+  gap", so this shows who hasn't been asked yet.
+- **Privacy for accessibility needs:** the dashboard stores only that a booking is
+  accessibility-led, never details of anyone's disability or health. That counts as
+  *sensitive information* under the Privacy Act and should stay in direct correspondence.
+- **Email is one-to-one, not broadcast.** Mailchimp EDMs are rare for now, so the
+  Mailchimp phase matters mainly for signups. Engagement tracking will be ready for when
+  segmented sends start.
+- **Brand:** St Patricks Blue `#252466`, Amaranth Pink `#F391BC`, Rich Black `#25282A`
+  (Pantone 426C). Bebas Neue for headings, Montserrat (Regular/Bold) for body text, and
+  Golden Hopes (script) used sparingly as a flourish. The layout takes its cues from the
+  Booking Journey Map: navy feature cards, pink numerals, soft pink tints. The copy can
+  have a little of the brand's cheek ("Confessions this week") but stays in functions
+  language, not nightlife language.
+
+---
+
 ## 1. How it fits together
 
 ```
@@ -76,12 +117,15 @@ works if the email is also on this list.
 |---|---|
 | first_name, last_name, email, phone, company | Email is used to match people across HubSpot and Mailchimp |
 | event_type | From the event types list (see below) |
+| audience | Milestone & Celebration, Corporate, or Accessibility-led. Filled in from the event type, can be changed |
 | event_date, guest_count, estimated_value | Estimated value can be filled in automatically as guests × price per head **(decision needed)** |
 | source | Website form, Instagram, Google, Referral, Wedding expo, Mailchimp signup, Other |
 | owner | A team member |
 | tags | Free-form, e.g. "Hot", "Repeat client" |
 | stage | Prospect, Lead, Tour booked, Toured, Proposal sent, Confirmed, Event held, or Lost |
 | lost_reason, lost_reason_note | Required when stage is Lost. `lost_from_stage` records the stage they were in when lost |
+| first_replied_at | When the team first replied. Used for the 24-hour response KPI |
+| review_requested_at, review_received | Post-event review tracking (proposed) |
 | last_contacted_at | Updated automatically when a call, email or tour is logged. Used by the follow-up list |
 | hubspot_contact_id, hubspot_deal_id, mailchimp_id | Links back to the original records, used by the sync |
 | created_at, updated_at | Set automatically |
@@ -134,7 +178,10 @@ whether it was an open or a click (plus the link clicked), but not full Mailchim
 activity history.
 
 ### Reference lists (editable in Settings)
-- `event_types`: name, typical price per head, display order
+- `event_types`: name, default audience, typical value, display order. Proposed starting list:
+  Milestone birthday, Engagement party, Anniversary, Wedding after-party / reception
+  kick-on, Celebration of life, Corporate end-of-year / Christmas party, Corporate
+  milestone or launch, Small gala / fundraiser, Community or organisation function, Other
 - `sources`: the source list above
 - Lost reasons are fixed: date unavailable, over budget, chose another venue, went
   quiet, guest count too large, other.
@@ -169,6 +216,7 @@ activity history.
   **(decision needed)**.
 - **Enquiry to tour**: time from becoming a Lead to the tour date.
 - **Tour booking to tour date**: time between `booked_at` and `scheduled_for`.
+- **Tour to proposal sent**: target 24–48 hours.
 - **Tour to confirmed**: time from tour attended to Confirmed.
 - **No-show rate**: no-shows ÷ (attended + no-shows).
 - **Tour-to-booking conversion**: attended tours whose contact later reached Confirmed.
