@@ -13,7 +13,10 @@ import type {
   Source,
   Stage,
   Tour,
+  AgreementTemplate,
   EventType,
+  Proposal,
+  ProposalTemplate,
   Rules,
   TourStatus,
   TrackingRule,
@@ -21,9 +24,10 @@ import type {
 } from './types';
 import { RULES, stageIndex } from '../lib/stages';
 import type { EmailTemplate } from '../lib/templates';
+import { bookingEvent } from '../lib/booking';
 import { buildInsights, type Insight } from '../lib/metrics';
 
-const STORAGE_KEY = 'confession-dashboard-sample-v5';
+const STORAGE_KEY = 'confession-dashboard-sample-v6';
 /** Stand-in for "the signed-in team member" until login arrives in phase 3. */
 export const CURRENT_USER_ID = 'tm-sam';
 
@@ -89,6 +93,12 @@ export interface NewsletterInput {
   interests: string[]; // Mailchimp group names the person picked
 }
 
+export interface OutgoingEmail {
+  fromId: string;
+  subject: string;
+  body: string;
+}
+
 interface StoreValue {
   data: Dataset;
   insights: Map<string, Insight>;
@@ -112,6 +122,17 @@ interface StoreValue {
   deleteTemplate(id: string): void;
   saveTrackingRule(r: TrackingRule): void;
   deleteTrackingRule(id: string): void;
+  saveProposalTemplate(t: ProposalTemplate): void;
+  saveAgreementTemplate(t: AgreementTemplate): void;
+  createProposal(contactId: string, template: ProposalTemplate, lines: Proposal['lines']): string;
+  updateProposal(id: string, patch: Partial<Proposal>): void;
+  sendProposal(id: string, email: OutgoingEmail): void;
+  acceptProposal(id: string): void;
+  finaliseBooking(contactId: string, input: EventInput & { agreementTemplateId: string; agreementText: string }): string;
+  sendAgreement(eventId: string, email: OutgoingEmail): void;
+  signAgreement(eventId: string, signedName: string, signatureImage: string): void;
+  sendDepositInvoice(eventId: string, invoice: { amount: number | null; paymentLink: string }, email: OutgoingEmail): void;
+  confirmDeposit(eventId: string): void;
   sendEmail(contactId: string, email: { fromId: string; subject: string; body: string; asksForGoogleReview?: boolean }): void;
   requestReview(contactId: string): void;
   resetSampleData(): void;
@@ -577,6 +598,188 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setData((d) => ({ ...d, trackingRules: d.trackingRules.filter((x) => x.id !== id) }));
   }, []);
 
+  // ---------- Proposals and finalising a booking ----------
+
+  const emailActivity = (contactId: string, email: OutgoingEmail): Activity => ({
+    id: newId('act'),
+    contactId,
+    type: 'email_out',
+    occurredAt: nowIso(),
+    summary: email.subject,
+    createdBy: email.fromId,
+    detail: email.body,
+  });
+
+  const saveProposalTemplate = useCallback((t: ProposalTemplate) => {
+    setData((d) => ({
+      ...d,
+      proposalTemplates: d.proposalTemplates.some((x) => x.id === t.id)
+        ? d.proposalTemplates.map((x) => (x.id === t.id ? t : x))
+        : [...d.proposalTemplates, t],
+    }));
+  }, []);
+
+  const saveAgreementTemplate = useCallback((t: AgreementTemplate) => {
+    setData((d) => ({
+      ...d,
+      agreementTemplates: d.agreementTemplates.some((x) => x.id === t.id)
+        ? d.agreementTemplates.map((x) => (x.id === t.id ? t : x))
+        : [...d.agreementTemplates, t],
+    }));
+  }, []);
+
+  const createProposal = useCallback((contactId: string, t: ProposalTemplate, lines: Proposal['lines']) => {
+    const id = newId('prop');
+    setData((d) => ({
+      ...d,
+      proposals: [
+        ...d.proposals,
+        {
+          id,
+          contactId,
+          templateId: t.id,
+          headline: t.headline,
+          intro: t.intro,
+          inclusions: t.inclusions,
+          nextSteps: t.nextSteps,
+          lines,
+          status: 'draft',
+          createdAt: nowIso(),
+          sentAt: null,
+          acceptedAt: null,
+        },
+      ],
+    }));
+    return id;
+  }, []);
+
+  const updateProposal = useCallback((id: string, patch: Partial<Proposal>) => {
+    setData((d) => ({ ...d, proposals: d.proposals.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
+  }, []);
+
+  const sendProposal = useCallback((id: string, email: OutgoingEmail) => {
+    setData((d) => {
+      const p = d.proposals.find((x) => x.id === id);
+      if (!p) return d;
+      let next: Dataset = {
+        ...d,
+        proposals: d.proposals.map((x) => (x.id === id ? { ...x, status: 'sent' as const, sentAt: nowIso() } : x)),
+        activities: [...d.activities, emailActivity(p.contactId, email)],
+      };
+      // The proposal's total becomes the booking's estimated value.
+      const total = p.lines.reduce((sum, l) => sum + (l.amount ?? 0), 0);
+      if (total > 0) next = { ...next, contacts: next.contacts.map((c) => (c.id === p.contactId ? { ...c, estimatedValue: total } : c)) };
+      const c = d.contacts.find((x) => x.id === p.contactId);
+      if (c && (c.stage === 'lost' || stageIndex(c.stage) < stageIndex('proposal_sent'))) {
+        next = withStage(next, p.contactId, 'proposal_sent');
+      } else {
+        next = { ...next, activities: [...next.activities, activity(p.contactId, 'proposal_sent', 'Proposal sent')] };
+      }
+      return next;
+    });
+  }, []);
+
+  const acceptProposal = useCallback((id: string) => {
+    setData((d) => {
+      const p = d.proposals.find((x) => x.id === id);
+      if (!p) return d;
+      let next: Dataset = {
+        ...d,
+        proposals: d.proposals.map((x) => (x.id === id ? { ...x, status: 'accepted' as const, acceptedAt: nowIso() } : x)),
+        activities: [...d.activities, activity(p.contactId, 'proposal_accepted', 'Accepted the proposal')],
+      };
+      const c = d.contacts.find((x) => x.id === p.contactId);
+      if (c && (c.stage === 'lost' || stageIndex(c.stage) < stageIndex('finalising'))) next = withStage(next, p.contactId, 'finalising');
+      return next;
+    });
+  }, []);
+
+  const finaliseBooking = useCallback(
+    (contactId: string, input: EventInput & { agreementTemplateId: string; agreementText: string }) => {
+      const existing = bookingEvent(dataRef.current, contactId);
+      const eventId = existing?.id ?? newId('ev');
+      setData((d) => {
+        const fields = { ...input, status: 'hold' as const };
+        const events = d.events.some((e) => e.id === eventId)
+          ? d.events.map((e) => (e.id === eventId ? { ...e, ...fields } : e))
+          : [...d.events, { ...fields, id: eventId, contactId, createdAt: nowIso() }];
+        let next: Dataset = {
+          ...d,
+          events,
+          contacts: d.contacts.map((c) =>
+            c.id === contactId ? { ...c, eventDate: input.date, guestCount: input.guestCount ?? c.guestCount } : c,
+          ),
+        };
+        const c = d.contacts.find((x) => x.id === contactId);
+        if (c && (c.stage === 'lost' || stageIndex(c.stage) < stageIndex('finalising'))) next = withStage(next, contactId, 'finalising');
+        return next;
+      });
+      return eventId;
+    },
+    [],
+  );
+
+  const onEvent = (eventId: string, fn: (ev: VenueEvent, d: Dataset) => Dataset) =>
+    setData((d) => {
+      const ev = d.events.find((e) => e.id === eventId);
+      return ev ? fn(ev, d) : d;
+    });
+  const patchEvent = (d: Dataset, eventId: string, patch: Partial<VenueEvent>): Dataset => ({
+    ...d,
+    events: d.events.map((e) => (e.id === eventId ? { ...e, ...patch } : e)),
+  });
+
+  const sendAgreement = useCallback((eventId: string, email: OutgoingEmail) => {
+    onEvent(eventId, (ev, d) => ({
+      ...patchEvent(d, eventId, { agreementSentAt: nowIso(), agreementSignedAt: null, signedName: '', signatureImage: '' }),
+      activities: [
+        ...d.activities,
+        emailActivity(ev.contactId, email),
+        activity(ev.contactId, 'agreement_sent', 'Hire agreement sent for e-signature'),
+      ],
+    }));
+  }, []);
+
+  const signAgreement = useCallback((eventId: string, signedName: string, signatureImage: string) => {
+    onEvent(eventId, (ev, d) => ({
+      ...patchEvent(d, eventId, { agreementSignedAt: nowIso(), signedName, signatureImage }),
+      activities: [
+        ...d.activities,
+        { ...activity(ev.contactId, 'agreement_signed', `Signed by ${signedName}`), createdBy: 'Client (e-signature)' },
+      ],
+    }));
+  }, []);
+
+  const sendDepositInvoice = useCallback(
+    (eventId: string, invoice: { amount: number | null; paymentLink: string }, email: OutgoingEmail) => {
+      onEvent(eventId, (ev, d) => ({
+        ...patchEvent(d, eventId, { depositInvoiceSentAt: nowIso(), depositAmount: invoice.amount, paymentLink: invoice.paymentLink }),
+        activities: [
+          ...d.activities,
+          emailActivity(ev.contactId, email),
+          activity(
+            ev.contactId,
+            'invoice_sent',
+            `Deposit invoice sent${invoice.amount ? ` (${invoice.amount.toLocaleString('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 })})` : ''}`,
+          ),
+        ],
+      }));
+    },
+    [],
+  );
+
+  const confirmDeposit = useCallback((eventId: string) => {
+    onEvent(eventId, (ev, d) => {
+      let next: Dataset = {
+        ...patchEvent(d, eventId, { depositPaidAt: nowIso(), status: 'confirmed' }),
+        activities: [...d.activities, activity(ev.contactId, 'deposit_paid', 'Deposit received. The event is live')],
+      };
+      const c = d.contacts.find((x) => x.id === ev.contactId);
+      if (c && (c.stage === 'lost' || stageIndex(c.stage) < stageIndex('confirmed'))) next = withStage(next, ev.contactId, 'confirmed');
+      return next;
+    });
+  }, []);
+
   const requestReview = useCallback((contactId: string) => {
     setData((d) => ({
       ...d,
@@ -615,6 +818,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     deleteTemplate,
     saveTrackingRule,
     deleteTrackingRule,
+    saveProposalTemplate,
+    saveAgreementTemplate,
+    createProposal,
+    updateProposal,
+    sendProposal,
+    acceptProposal,
+    finaliseBooking,
+    sendAgreement,
+    signAgreement,
+    sendDepositInvoice,
+    confirmDeposit,
     requestReview,
     resetSampleData,
   };

@@ -15,6 +15,7 @@ import { formatDate, formatDateTime, formatHours, formatMoney, fullName, timeAgo
 import { Empty, Flags, OwnerDot, StageNum, StatusTag, useToast } from '../components/ui';
 import { BookTourModal, ContactFormModal, LogActivityModal, LostModal } from '../components/modals';
 import { ClientJourney } from '../components/ClientJourney';
+import { BookingProgress } from '../components/BookingFlow';
 import { EmailComposer } from '../components/EmailComposer';
 import { CONSENT_LABEL, mailchimpRecord } from '../lib/mailchimp';
 import type { MarketingConsent } from '../data/types';
@@ -59,6 +60,11 @@ function iconFor(type: ActivityType | 'stage') {
       return CursorIcon;
     case 'form_submission':
     case 'proposal_sent':
+    case 'proposal_accepted':
+    case 'agreement_sent':
+    case 'agreement_signed':
+    case 'invoice_sent':
+    case 'deposit_paid':
       return FormIcon;
     case 'tour_booked':
     case 'tour_attended':
@@ -238,6 +244,9 @@ export default function ContactPage() {
           ))}
         </div>
       </section>
+
+      {(['toured', 'proposal_sent', 'finalising', 'confirmed', 'event_held'].includes(c.stage) ||
+        data.proposals.some((p) => p.contactId === c.id)) && <BookingProgress contact={c} />}
 
       <div className="segmented profile-tabs" role="tablist" aria-label="Profile sections">
         <button role="tab" aria-selected={tab === 'overview'} aria-pressed={tab === 'overview'} onClick={() => setTab('overview')}>

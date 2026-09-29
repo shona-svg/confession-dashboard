@@ -4,6 +4,7 @@ import { useStore } from '../data/store';
 import type { Insight } from '../lib/metrics';
 import { REPLY_TYPES, RULES } from '../lib/stages';
 import { formatDate } from '../lib/format';
+import { bookingEvent, latestProposal } from '../lib/booking';
 
 type StepState = 'done' | 'current' | 'upcoming' | 'skipped' | 'stopped';
 
@@ -39,6 +40,8 @@ export function ClientJourney({ insight }: { insight: Insight }) {
         .map((a) => t(a.occurredAt))
         .sort((a, b) => a - b)[0] ?? null
     : null;
+  const proposalRecord = latestProposal(data, c.id);
+  const bookingEv = bookingEvent(data, c.id);
   const eventAt = c.eventDate ? new Date(c.eventDate + 'T18:00:00').getTime() : null;
   const held = insight.reachedAt.event_held ?? (c.stage === 'event_held' ? eventAt : null);
 
@@ -88,13 +91,29 @@ export function ClientJourney({ insight }: { insight: Insight }) {
       phase: 1,
       title: 'Proposal follow-up',
       hint: 'Personal call or message if no reply in 3–4 business days',
-      at: followUpAt ?? (insight.reachedAt.confirmed && proposalAt ? insight.reachedAt.confirmed : null),
+      at: followUpAt ?? ((insight.reachedAt.finalising ?? insight.reachedAt.confirmed) && proposalAt ? (insight.reachedAt.finalising ?? insight.reachedAt.confirmed)! : null),
       due: proposalAt ? proposalAt + 4 * DAY : null,
+    },
+    {
+      id: 'accepted',
+      phase: 2,
+      title: 'Accepts the proposal',
+      hint: 'Then: Finalise booking',
+      at: proposalRecord?.acceptedAt ? t(proposalRecord.acceptedAt) : (insight.reachedAt.finalising ?? null),
+      due: null,
+    },
+    {
+      id: 'signed',
+      phase: 2,
+      title: 'Signs the hire agreement',
+      hint: 'Sent from the dashboard, signed online',
+      at: bookingEv?.agreementSignedAt ? t(bookingEv.agreementSignedAt) : null,
+      due: null,
     },
     {
       id: 'confirmed',
       phase: 2,
-      title: 'Accepts proposal and pays deposit',
+      title: 'Pays the deposit: event is live',
       hint: 'Date locked in and in the calendar',
       at: insight.reachedAt.confirmed ?? null,
       due: null,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { generateSampleData } from '../data/sampleData';
 import { buildInsights, funnel, homeStats, rangeFor, speed, tourStats, weekly } from './metrics';
 import { statusOf } from './stages';
+import { bookingStep } from './booking';
 
 const NOW = new Date('2026-09-28T10:00:00').getTime();
 const data = generateSampleData(NOW);
@@ -11,7 +12,7 @@ describe('sample data', () => {
   it('has about 60 contacts across every stage', () => {
     expect(data.contacts).toHaveLength(60);
     const stages = new Set(data.contacts.map((c) => c.stage));
-    expect(stages.size).toBe(8);
+    expect(stages.size).toBe(9);
   });
 
   it('never puts history in the future, except booked tours', () => {
@@ -46,7 +47,7 @@ describe('events', () => {
       if (c.stage === 'event_held') expect(e.date < today).toBe(true);
       if (c.stage === 'confirmed') expect(e.date >= today).toBe(true);
     }
-    expect(live.filter((e) => e.status === 'hold')).toHaveLength(2);
+    expect(live.filter((e) => e.status === 'hold')).toHaveLength(5); // 2 pencilled during proposals + 3 finalising
   });
 });
 
@@ -94,7 +95,22 @@ describe('reports', () => {
     const t = tourStats(data, insights, all, NOW);
     expect(t.attended).toBeGreaterThan(10);
     const h = homeStats(data, insights, NOW);
-    expect(h.openCount).toBe(28);
+    expect(h.openCount).toBe(29);
     console.log({ counts, speed: s, tours: t, home: h, followUps: [...insights.values()].filter((i) => i.followUpDue).length });
+  });
+});
+
+describe('finalising a booking', () => {
+  it('shows each finalising contact at the right paperwork step', () => {
+    const steps = data.contacts.filter((c) => c.stage === 'finalising').map((c) => bookingStep(data, c)).sort();
+    expect(steps).toEqual(['awaiting_deposit', 'awaiting_signature', 'invoice_to_send']);
+  });
+
+  it('only counts an event as live once the deposit is paid', () => {
+    for (const c of data.contacts.filter((x) => x.stage === 'confirmed')) {
+      const ev = data.events.find((e) => e.contactId === c.id && e.status === 'confirmed');
+      expect(ev?.depositPaidAt).toBeTruthy();
+      expect(ev?.agreementSignedAt).toBeTruthy();
+    }
   });
 });

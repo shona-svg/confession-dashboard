@@ -1072,7 +1072,7 @@ table.data tfoot td {
 
 .journey {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(8, minmax(0, 1fr));
   gap: 4px;
 }
 
@@ -1514,11 +1514,17 @@ table.data tfoot td {
 
 .attention {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1200px) {
+  .attention {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
   .attention {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2536,4 +2542,315 @@ code {
 pre.code code {
   background: none;
   padding: 0;
+}
+
+/* ---------- Proposals and finalising a booking ---------- */
+
+.booking-card.is-live {
+  border-color: var(--good);
+}
+
+.live-badge {
+  font-family: var(--font-display);
+  font-size: 20px;
+  letter-spacing: 0.08em;
+  background: var(--good);
+  color: var(--surface);
+  padding: 2px 12px 0;
+  border-radius: 6px;
+}
+
+.live-line {
+  margin: -6px 0 12px;
+  font-weight: 600;
+  color: var(--good);
+}
+
+.booking-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+@media (max-width: 1000px) {
+  .booking-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.bstep {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 4px 10px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid transparent;
+  align-content: start;
+}
+
+.bstep.current {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--pink);
+}
+
+.bstep.upcoming {
+  opacity: 0.6;
+}
+
+.bmark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bstep.done .bmark {
+  background: var(--navy);
+  border-color: var(--navy);
+  color: var(--pink);
+}
+
+.bstep.current .bmark {
+  background: var(--pink);
+  border-color: var(--pink);
+}
+
+.btext {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.btitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.bdetail {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.baction {
+  grid-column: 2;
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.inline-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.booking-links {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.flow-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 6px;
+  counter-reset: step;
+  flex-wrap: wrap;
+}
+
+.flow-steps li {
+  counter-increment: step;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.flow-steps li::before {
+  content: counter(step) '  ';
+}
+
+.flow-steps li.on {
+  background: var(--navy);
+  color: #fff;
+}
+
+.agreement-text {
+  min-height: 320px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.agreement-view {
+  white-space: pre-wrap;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  max-height: 300px;
+  overflow: auto;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.sig-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.sig-pad {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  aspect-ratio: 4 / 1;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: #fff;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.signed-block img {
+  max-width: 280px;
+  background: #fff;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.sig-typed {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--accent);
+  margin: 0;
+}
+
+.attach-note {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.lines-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.line-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px 36px;
+  gap: 6px;
+  align-items: center;
+}
+
+.line-row.total-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+/* The proposal as the client sees it (the designed PDF replaces this later). */
+.proposal-doc {
+  background: #fff;
+  color: #25282a;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 28px;
+  max-height: 60vh;
+  overflow: auto;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.proposal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #b0336f;
+  font-weight: 600;
+}
+
+.proposal-head img {
+  width: 150px;
+}
+
+.proposal-for {
+  margin: 20px 0 4px;
+  color: #595670;
+}
+
+.proposal-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 38px;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #252466;
+  margin: 0 0 12px;
+}
+
+.proposal-doc h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: 0.03em;
+  color: #252466;
+  margin: 18px 0 6px;
+}
+
+.proposal-lines {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.proposal-lines td {
+  padding: 6px 0;
+  border-bottom: 1px solid #e3dfea;
+}
+
+.proposal-lines .r {
+  text-align: right;
+}
+
+.proposal-lines .total td {
+  font-weight: 700;
+  border-bottom: 2px solid #252466;
+}
+
+.proposal-foot {
+  margin-top: 24px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #86829a;
+}
+
+.modal:has(.proposal-doc),
+.modal:has(.agreement-text),
+.modal:has(.agreement-view) {
+  width: min(760px, 100%);
 }

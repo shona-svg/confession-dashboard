@@ -9,6 +9,7 @@ export const JOURNEY: Stage[] = [
   'tour_booked',
   'toured',
   'proposal_sent',
+  'finalising',
   'confirmed',
   'event_held',
 ];
@@ -21,6 +22,7 @@ export const STAGE_LABEL: Record<Stage, string> = {
   tour_booked: 'Tour booked',
   toured: 'Toured',
   proposal_sent: 'Proposal sent',
+  finalising: 'Finalising',
   confirmed: 'Confirmed',
   event_held: 'Event held',
   lost: 'Lost',
@@ -32,13 +34,14 @@ export const STAGE_HINT: Record<Stage, string> = {
   tour_booked: 'Tour time locked in',
   toured: 'Walked through the venue',
   proposal_sent: 'Custom proposal with pricing sent',
-  confirmed: 'Deposit paid, date locked',
+  finalising: 'Accepted: agreement and deposit under way',
+  confirmed: 'Deposit paid: event is live',
   event_held: 'The night has happened',
   lost: 'Not going ahead',
 };
 
 /** Open means "still in play and needs the team's attention". */
-export const OPEN_STAGES: Stage[] = ['lead', 'tour_booked', 'toured', 'proposal_sent'];
+export const OPEN_STAGES: Stage[] = ['lead', 'tour_booked', 'toured', 'proposal_sent', 'finalising'];
 export const WON_STAGES: Stage[] = ['confirmed', 'event_held'];
 
 export function stageIndex(stage: Stage): number {
@@ -102,6 +105,9 @@ export const CONTACT_TYPES: ActivityType[] = [
   'tour_booked',
   'tour_attended',
   'proposal_sent',
+  'proposal_accepted',
+  'agreement_sent',
+  'invoice_sent',
 ];
 
 /** Outgoing replies from the team, used for first reply time. */
@@ -127,6 +133,11 @@ export const ACTIVITY_LABEL: Record<ActivityType, string> = {
   edm_open: 'EDM opened',
   edm_click: 'EDM link clicked',
   web_visit: 'Website visit',
+  proposal_accepted: 'Proposal accepted',
+  agreement_sent: 'Hire agreement sent',
+  agreement_signed: 'Hire agreement signed',
+  invoice_sent: 'Deposit invoice sent',
+  deposit_paid: 'Deposit paid: event is live',
 };
 
 export const SPACE_LABEL = {

@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useStore } from '../data/store';
-import type { Audience, EventType, Rules, TrackingRule } from '../data/types';
+import type { AgreementTemplate, Audience, EventType, ProposalTemplate, Rules, TrackingRule } from '../data/types';
 import { AUDIENCES, AUDIENCE_LABEL, DEFAULT_RULES, LOST_REASONS, SOURCES } from '../lib/stages';
 import type { EmailTemplate } from '../lib/templates';
 import { MAILCHIMP_AUDIENCE, NEWSLETTER_INTERESTS, TAG_RULES } from '../lib/mailchimp';
 import { Empty, OwnerDot, useToast } from '../components/ui';
 
-type Tab = 'general' | 'rules' | 'events' | 'templates' | 'mailchimp' | 'tracking';
+type Tab = 'general' | 'rules' | 'events' | 'templates' | 'proposals' | 'agreements' | 'mailchimp' | 'tracking';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'general', label: 'General' },
   { id: 'rules', label: 'Rules' },
   { id: 'events', label: 'Event types' },
   { id: 'templates', label: 'Email templates' },
+  { id: 'proposals', label: 'Proposals' },
+  { id: 'agreements', label: 'Agreements' },
   { id: 'mailchimp', label: 'Mailchimp' },
   { id: 'tracking', label: 'Website tracking' },
 ];
@@ -48,6 +50,8 @@ export default function SettingsPage() {
       {tab === 'rules' && <RulesTab />}
       {tab === 'events' && <EventTypesTab />}
       {tab === 'templates' && <TemplatesTab />}
+      {tab === 'proposals' && <ProposalTemplatesTab />}
+      {tab === 'agreements' && <AgreementTemplatesTab />}
       {tab === 'mailchimp' && <MailchimpTab />}
       {tab === 'tracking' && <TrackingTab />}
     </div>
@@ -640,6 +644,196 @@ function TrackingTab() {
             Add rule
           </button>
         </div>
+      </section>
+    </div>
+  );
+}
+
+// ---------- Proposal templates ----------
+
+function ProposalTemplatesTab() {
+  const { data, saveProposalTemplate } = useStore();
+  const toast = useToast();
+  const [selected, setSelected] = useState(data.proposalTemplates[0]?.id ?? '');
+  const current = data.proposalTemplates.find((t) => t.id === selected);
+  const [draft, setDraft] = useState<ProposalTemplate | null>(current ?? null);
+  const pick = (id: string) => {
+    setSelected(id);
+    setDraft(data.proposalTemplates.find((t) => t.id === id) ?? null);
+  };
+  const addNew = () => {
+    const t: ProposalTemplate = {
+      id: `pt_${Date.now().toString(36)}`,
+      name: 'New proposal template',
+      audience: 'milestone',
+      headline: 'Your {{eventType}} at Confession',
+      intro: '',
+      inclusions: '',
+      nextSteps: '',
+    };
+    saveProposalTemplate(t);
+    setSelected(t.id);
+    setDraft(t);
+  };
+  const dirty = draft && current && JSON.stringify(draft) !== JSON.stringify(current);
+  return (
+    <div className="grid-template-editor">
+      <section className="card">
+        <div className="card-head">
+          <h2 className="card-title">Proposals</h2>
+          <button className="btn small primary" onClick={addNew}>
+            + Add
+          </button>
+        </div>
+        <div className="list">
+          {data.proposalTemplates.map((t) => (
+            <button key={t.id} type="button" className={`template-item${t.id === selected ? ' active' : ''}`} onClick={() => pick(t.id)}>
+              <span className="title">{t.name}</span>
+              <span className="meta">For {AUDIENCE_LABEL[t.audience]}</span>
+            </button>
+          ))}
+        </div>
+        <p className="small muted" style={{ marginBottom: 0 }}>
+          The designed PDF layout for each persona will be added when the designs are ready. The words here fill it.
+        </p>
+      </section>
+      <section className="card">
+        {!draft ? (
+          <Empty title="No template selected" />
+        ) : (
+          <div className="form-grid">
+            <label className="field">
+              <span>Name</span>
+              <input id="pt-name" className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </label>
+            <label className="field">
+              <span>Suggested for</span>
+              <select id="pt-aud" className="select" value={draft.audience} onChange={(e) => setDraft({ ...draft, audience: e.target.value as Audience })}>
+                {AUDIENCES.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="field wide">
+              <span>Headline</span>
+              <input id="pt-headline" className="input" value={draft.headline} onChange={(e) => setDraft({ ...draft, headline: e.target.value })} />
+            </label>
+            <label className="field wide">
+              <span>Introduction</span>
+              <textarea id="pt-intro" className="textarea" value={draft.intro} onChange={(e) => setDraft({ ...draft, intro: e.target.value })} />
+            </label>
+            <label className="field wide">
+              <span>What's included (one per line)</span>
+              <textarea id="pt-incl" className="textarea" style={{ minHeight: 130 }} value={draft.inclusions} onChange={(e) => setDraft({ ...draft, inclusions: e.target.value })} />
+            </label>
+            <label className="field wide">
+              <span>Next steps</span>
+              <textarea id="pt-next" className="textarea" value={draft.nextSteps} onChange={(e) => setDraft({ ...draft, nextSteps: e.target.value })} />
+            </label>
+            <div className="wide placeholder-help">
+              <span className="small muted">Fill-ins:</span>
+              {['{{firstName}}', '{{eventType}}', '{{eventDate}}', '{{company}}', '{{guests}}'].map((p) => (
+                <span key={p} className="tag plain">
+                  {p}
+                </span>
+              ))}
+            </div>
+            <div className="modal-actions wide">
+              <button
+                className="btn primary"
+                disabled={!dirty || !draft.name.trim()}
+                onClick={() => {
+                  saveProposalTemplate(draft);
+                  toast('Proposal template saved');
+                }}
+              >
+                Save template
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+// ---------- Agreement templates ----------
+
+function AgreementTemplatesTab() {
+  const { data, saveAgreementTemplate } = useStore();
+  const toast = useToast();
+  const [selected, setSelected] = useState(data.agreementTemplates[0]?.id ?? '');
+  const current = data.agreementTemplates.find((t) => t.id === selected);
+  const [draft, setDraft] = useState<AgreementTemplate | null>(current ?? null);
+  const pick = (id: string) => {
+    setSelected(id);
+    setDraft(data.agreementTemplates.find((t) => t.id === id) ?? null);
+  };
+  const addNew = () => {
+    const t: AgreementTemplate = { id: `at_${Date.now().toString(36)}`, name: 'New agreement', body: current?.body ?? '' };
+    saveAgreementTemplate(t);
+    setSelected(t.id);
+    setDraft(t);
+  };
+  const dirty = draft && current && JSON.stringify(draft) !== JSON.stringify(current);
+  return (
+    <div className="grid-template-editor">
+      <section className="card">
+        <div className="card-head">
+          <h2 className="card-title">Agreements</h2>
+          <button className="btn small primary" onClick={addNew}>
+            + Add
+          </button>
+        </div>
+        <div className="list">
+          {data.agreementTemplates.map((t) => (
+            <button key={t.id} type="button" className={`template-item${t.id === selected ? ' active' : ''}`} onClick={() => pick(t.id)}>
+              <span className="title">{t.name}</span>
+              <span className="meta">Sent from Finalise booking</span>
+            </button>
+          ))}
+        </div>
+        <p className="small flag warn" style={{ whiteSpace: 'normal', padding: '8px 10px', marginBottom: 0 }}>
+          Starter text from the Booking Journey Map. Replace it with your lawyer-approved terms before any client sees it.
+        </p>
+      </section>
+      <section className="card">
+        {!draft ? (
+          <Empty title="No agreement selected" />
+        ) : (
+          <div className="form-grid">
+            <label className="field wide">
+              <span>Name</span>
+              <input id="at-name" className="input" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+            </label>
+            <label className="field wide">
+              <span>Agreement text</span>
+              <textarea id="at-body" className="textarea agreement-text" value={draft.body} onChange={(e) => setDraft({ ...draft, body: e.target.value })} />
+            </label>
+            <div className="wide placeholder-help">
+              <span className="small muted">Fill-ins:</span>
+              {['{{clientName}}', '{{clientEmail}}', '{{eventType}}', '{{eventDate}}', '{{eventTimes}}', '{{space}}', '{{guests}}'].map((p) => (
+                <span key={p} className="tag plain">
+                  {p}
+                </span>
+              ))}
+            </div>
+            <div className="modal-actions wide">
+              <button
+                className="btn primary"
+                disabled={!dirty || !draft.name.trim()}
+                onClick={() => {
+                  saveAgreementTemplate(draft);
+                  toast('Agreement saved');
+                }}
+              >
+                Save agreement
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

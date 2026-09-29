@@ -22,6 +22,7 @@ import { Flags, OwnerDot, StageNum, Tags, useToast } from '../components/ui';
 import { LostModal } from '../components/modals';
 import { sum } from '../lib/metrics';
 import { EmailButton } from '../components/EmailComposer';
+import { BOOKING_STEP_LABEL, bookingStep } from '../lib/booking';
 
 export default function PipelinePage() {
   const { data, insights, moveStage } = useStore();
@@ -236,6 +237,7 @@ function CardBody({
         <div className="flags">
           <Tags tags={c.tags} />
           {c.stage === 'lost' && c.lostReason ? null : <Flags insight={insight} compact />}
+          <BookingChip contact={c} />
         </div>
       )}
       <div className="bottom">
@@ -247,4 +249,13 @@ function CardBody({
       </div>
     </article>
   );
+}
+
+function BookingChip({ contact }: { contact: Contact }) {
+  const { data } = useStore();
+  if (contact.stage !== 'finalising') return null;
+  const step = bookingStep(data, contact);
+  if (!step) return null;
+  const urgent = step === 'invoice_to_send' || step === 'agreement_to_send';
+  return <span className={`flag ${urgent ? 'bad' : 'warn'}`}>{BOOKING_STEP_LABEL[step]}</span>;
 }

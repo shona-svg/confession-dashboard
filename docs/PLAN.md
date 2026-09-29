@@ -421,3 +421,24 @@ New contact fields: `accessibility_needs` (sensitive, only shown inside the dash
   tracked link in an EDM or dashboard email. Interest rules add tags and can alert the team. Anonymous visitors are
   deleted after 90 days. Tables: `web_visitors`, `web_visits`.
 - **Documents and e-signing (proposed):** see the proposal document.
+
+---
+
+## 11. Proposals and finalising a booking (29 September 2026)
+
+New stage between Proposal sent and Confirmed: **Finalising** (proposal accepted, paperwork under way).
+
+1. **Proposal:** templates per persona (Milestone & Celebration, Corporate, Accessibility-led), edited for each
+   client (headline, intro, inclusions, price lines, next steps), previewed, then emailed from Gmail. The designed
+   PDF layouts will replace the simple layout when they're ready. Sending sets the estimated value to the proposal total.
+2. **Accepted:** Mark accepted → the contact moves to Finalising.
+3. **Finalise booking:** confirm the event details (held on the calendar), fill in and adjust the hire agreement,
+   and email it with a private signing link.
+4. **Signed:** the client signs online (name, drawn signature, agreement tick). The team is alerted, and the
+   signed agreement and signing record are stored and can't be changed afterwards.
+5. **Deposit invoice:** amount plus an optional payment link (invoicing system to be decided), emailed.
+6. **Deposit paid:** the team confirms, then the event is confirmed and the contact moves to Confirmed: **LIVE**.
+
+Home shows "Bookings to finalise", pipeline cards show the paperwork step, and the Client journey includes
+"Signs the hire agreement" and "Pays the deposit: event is live". Database: `proposals`, `proposal_templates`,
+`agreement_templates`, `signing_links`, and paperwork columns on `events`.

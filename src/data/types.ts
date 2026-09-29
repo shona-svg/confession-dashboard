@@ -10,6 +10,7 @@ export type Stage =
   | 'tour_booked'
   | 'toured'
   | 'proposal_sent'
+  | 'finalising'
   | 'confirmed'
   | 'event_held'
   | 'lost';
@@ -117,6 +118,54 @@ export interface VenueEvent {
   status: EventStatus; // hold = pencilled in, not paid; confirmed = deposit paid
   notes: string;
   createdAt: string;
+  // Booking paperwork ("Finalise booking"): agreement → signature → deposit invoice → deposit paid.
+  agreementTemplateId?: string | null;
+  agreementText?: string;
+  agreementSentAt?: string | null;
+  agreementSignedAt?: string | null;
+  signedName?: string;
+  signatureImage?: string; // preview only: the live system stores signed PDFs in file storage
+  depositAmount?: number | null;
+  paymentLink?: string;
+  depositInvoiceSentAt?: string | null;
+  depositPaidAt?: string | null;
+}
+
+/** A proposal template for one audience persona (the designed PDF layouts come later). */
+export interface ProposalTemplate {
+  id: string;
+  name: string;
+  audience: Audience;
+  headline: string;
+  intro: string;
+  inclusions: string; // one per line
+  nextSteps: string;
+}
+
+export interface ProposalLine {
+  label: string;
+  amount: number | null;
+}
+
+export interface Proposal {
+  id: string;
+  contactId: string;
+  templateId: string;
+  headline: string;
+  intro: string;
+  inclusions: string;
+  nextSteps: string;
+  lines: ProposalLine[];
+  status: 'draft' | 'sent' | 'accepted' | 'declined';
+  createdAt: string;
+  sentAt: string | null;
+  acceptedAt: string | null;
+}
+
+export interface AgreementTemplate {
+  id: string;
+  name: string;
+  body: string;
 }
 
 export type ActivityType =
@@ -138,7 +187,12 @@ export type ActivityType =
   | 'mailchimp_signup'
   | 'edm_open'
   | 'edm_click'
-  | 'web_visit';
+  | 'web_visit'
+  | 'proposal_accepted'
+  | 'agreement_sent'
+  | 'agreement_signed'
+  | 'invoice_sent'
+  | 'deposit_paid';
 
 export interface Activity {
   id: string;
@@ -179,4 +233,7 @@ export interface Dataset {
   rules: Rules;
   templates: EmailTemplate[];
   trackingRules: TrackingRule[];
+  proposals: Proposal[];
+  proposalTemplates: ProposalTemplate[];
+  agreementTemplates: AgreementTemplate[];
 }

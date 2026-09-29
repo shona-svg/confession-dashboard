@@ -11,6 +11,7 @@ import { PlusIcon } from '../components/Icons';
 import { NewLeads } from '../components/NewLeads';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { EmailButton } from '../components/EmailComposer';
+import { bookingStep } from '../lib/booking';
 
 export default function HomePage() {
   const { data, insights, now } = useStore();
@@ -20,6 +21,7 @@ export default function HomePage() {
   const all = [...insights.values()];
 
   const replyOverdue = all.filter((i) => i.replyOverdue);
+  const paperwork = data.contacts.filter((c) => ['invoice_to_send', 'agreement_to_send'].includes(bookingStep(data, c) ?? ''));
   const proposalOverdue = all.filter((i) => i.proposalOverdue);
   const unmarkedTours = data.tours.filter((t) => t.status === 'booked' && new Date(t.scheduledFor).getTime() < now);
 
@@ -101,6 +103,14 @@ export default function HomePage() {
             <span className="t">Tours need an outcome</span>
             <br />
             <span className="d">Mark attended or no-show</span>
+          </span>
+        </Link>
+        <Link to="/pipeline" className={`attn ${paperwork.length ? 'bad' : 'ok'}`}>
+          <span className="n">{paperwork.length}</span>
+          <span>
+            <span className="t">Bookings to finalise</span>
+            <br />
+            <span className="d">Agreements or deposit invoices to send</span>
           </span>
         </Link>
       </section>

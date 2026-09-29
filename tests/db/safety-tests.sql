@@ -255,3 +255,37 @@ begin
 end $$;
 
 \echo 'Settings and tracking checks passed'
+
+-- ---------- Proposals and signed agreements (third migration) ----------
+do $$
+declare
+  cid uuid;
+  eid uuid;
+begin
+  perform set_config('request.jwt.claim.sub', '', false);
+  insert into public.contacts (first_name, email, stage) values ('Signer', 'signer@example.com', 'finalising') returning id into cid;
+  insert into public.events (contact_id, date, start_time, end_time, status, agreement_text, agreement_sent_at, agreement_signed_at, signed_name)
+  values (cid, current_date + 90, '18:00', '23:00', 'hold', 'Agreed terms', now(), now(), 'Signer') returning id into eid;
+  perform set_config('app.test_event', eid::text, false);
+  perform pg_temp.expect((select stage from public.contacts where id = cid) = 'finalising', 'contacts can be in the Finalising stage');
+end $$;
+
+select pg_temp.act_as('00000000-0000-0000-0000-00000000000b');
+set role authenticated;
+do $$
+declare eid uuid := current_setting('app.test_event')::uuid;
+begin
+  begin
+    update public.events set agreement_text = 'Sneaky new terms' where id = eid;
+    raise exception 'FAILED: signed agreement was changed';
+  exception when raise_exception then
+    if sqlerrm like 'FAILED%' then raise; end if;
+    perform pg_temp.expect(sqlerrm like 'This agreement has been signed%', 'a signed agreement can''t be changed');
+  end;
+  update public.events set deposit_invoice_sent_at = now() where id = eid;
+  perform pg_temp.expect((select deposit_invoice_sent_at from public.events where id = eid) is not null, 'the team can still record the deposit invoice');
+  perform pg_temp.expect((select count(*) from public.signing_links) = 0, 'signing links are hidden from the app');
+end $$;
+reset role;
+
+\echo 'Proposal and agreement checks passed'

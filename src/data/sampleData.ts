@@ -15,9 +15,11 @@ import type {
   StageChange,
   TeamMember,
   Tour,
+  Proposal,
   TrackingRule,
   VenueEvent,
 } from './types';
+import { DEFAULT_AGREEMENT_TEMPLATES, DEFAULT_PROPOSAL_TEMPLATES } from '../lib/booking';
 import { DEFAULT_RULES } from '../lib/stages';
 import { TEMPLATES } from '../lib/templates';
 
@@ -143,11 +145,12 @@ const niceTime = (ms: number) =>
 // How many contacts end up in each stage (60 in total).
 const STAGE_MIX: [Stage, number][] = [
   ['prospect', 8],
-  ['lead', 10],
+  ['lead', 9],
   ['tour_booked', 7],
   ['toured', 5],
-  ['proposal_sent', 6],
-  ['confirmed', 8],
+  ['proposal_sent', 5],
+  ['finalising', 3],
+  ['confirmed', 7],
   ['event_held', 7],
   ['lost', 9],
 ];
@@ -182,6 +185,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
   const stageChanges: StageChange[] = [];
   const tours: Tour[] = [];
   const events: VenueEvent[] = [];
+  const proposals: Proposal[] = [];
   const activities: Activity[] = [];
   let seq = 0;
   const id = (p: string) => `${p}-${++seq}`;
@@ -228,7 +232,8 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
       const bookAfter = replyAfter + rnd.between(0.5, 4) * DAY;
       const tourAfter = bookAfter + rnd.between(3, 14) * DAY;
       const proposalAfter = tourAfter + (rnd.chance(0.75) ? rnd.between(16, 46) : rnd.between(50, 90)) * HOUR;
-      const confirmAfter = proposalAfter + rnd.between(2, 18) * DAY;
+      const acceptAfter = proposalAfter + rnd.between(2, 10) * DAY;
+      const confirmAfter = acceptAfter + rnd.between(3, 10) * DAY;
 
       // Decide when the enquiry arrived so each contact is at the right point today.
       let enquiredAt: number;
@@ -257,6 +262,10 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
           break;
         case 'proposal_sent':
           enquiredAt = nowMs - proposalAfter - rnd.between(0.5, 13) * DAY;
+          break;
+        case 'finalising':
+          // Accepted a few days ago; paperwork part-way through.
+          enquiredAt = nowMs - acceptAfter - rnd.between(2, 6) * DAY;
           break;
         case 'confirmed':
           // A few confirmed in the last month, the rest earlier.
@@ -414,23 +423,54 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
         current = 'proposal_sent';
         act(cid, 'proposal_sent', at, `Proposal sent for ${etName}, ${guestCount} guests`, owner);
         lastStep = at;
+        const tpl = DEFAULT_PROPOSAL_TEMPLATES.find((t) => t.audience === audience) ?? DEFAULT_PROPOSAL_TEMPLATES[0];
+        const accepted = reaches('finalising');
+        proposals.push({
+          id: id('prop'),
+          contactId: cid,
+          templateId: tpl.id,
+          headline: tpl.headline,
+          intro: tpl.intro,
+          inclusions: tpl.inclusions,
+          nextSteps: tpl.nextSteps,
+          lines: [{ label: 'Venue hire and package', amount: value }],
+          status: accepted ? 'accepted' : 'sent',
+          createdAt: iso(at - HOUR),
+          sentAt: iso(at),
+          acceptedAt: accepted ? iso(Math.min(enquiredAt + acceptAfter, nowMs)) : null,
+        });
         if (target === 'proposal_sent' && rnd.chance(0.5)) {
           act(cid, 'email_in', at + rnd.between(1, 3) * DAY, 'Question about styling and bump-in times', 'Gmail sync');
         }
       }
 
+      // Paperwork times for anyone who accepted.
+      const acceptedAt = enquiredAt + acceptAfter;
+      const agreementSentAt = acceptedAt + 0.3 * DAY;
+      const agreementSignedAt = agreementSentAt + 0.5 * DAY;
+      const invoiceSentAt = agreementSignedAt + 0.3 * DAY;
+      if (reaches('finalising')) {
+        act(cid, 'call', enquiredAt + proposalAfter + (acceptAfter - proposalAfter) / 2, 'Follow-up call on the proposal', owner);
+        move(cid, current, 'finalising', acceptedAt, owner);
+        current = 'finalising';
+        act(cid, 'proposal_accepted', acceptedAt, 'Accepted the proposal', owner);
+        lastStep = acceptedAt;
+        const paperwork = target === 'finalising' ? k : 3; // 0 sent · 1 signed · 2 invoiced · 3 paid
+        act(cid, 'agreement_sent', agreementSentAt, 'Hire agreement sent for e-signature', owner);
+        if (paperwork >= 1) act(cid, 'agreement_signed', agreementSignedAt, `Signed by ${firstName} ${lastName}`, 'Client (e-signature)');
+        if (paperwork >= 2) act(cid, 'invoice_sent', invoiceSentAt, `Deposit invoice sent (${value.toLocaleString('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 })})`, owner);
+      }
+
       if (reaches('confirmed')) {
-        const followUp = enquiredAt + proposalAfter + (confirmAfter - proposalAfter) / 2;
-        act(cid, 'call', followUp, 'Follow-up call on the proposal', owner);
         const at = enquiredAt + confirmAfter;
         move(cid, current, 'confirmed', at, owner);
         current = 'confirmed';
-        act(cid, 'email_in', at, 'Deposit paid. Date locked in', 'Gmail sync');
+        act(cid, 'deposit_paid', at, 'Deposit received. The event is live', owner);
         lastStep = at;
       }
 
       // Booked functions go on the calendar. Two proposals have the date pencilled in.
-      if (eventDateMs && (target === 'confirmed' || target === 'event_held' || (target === 'proposal_sent' && k < 2))) {
+      if (eventDateMs && (target === 'confirmed' || target === 'event_held' || target === 'finalising' || (target === 'proposal_sent' && k < 2))) {
         const corporateNight = isCorporate && new Date(eventDateMs).getDay() >= 1 && new Date(eventDateMs).getDay() <= 4;
         events.push({
           id: id('ev'),
@@ -440,10 +480,21 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
           endTime: corporateNight ? '22:30' : rnd.pick(['23:00', '23:30', '00:00']),
           space: guestCount > 150 ? 'altar_room_plus' : 'altar_room',
           guestCount,
-          status: target === 'proposal_sent' ? 'hold' : 'confirmed',
+          status: target === 'proposal_sent' || target === 'finalising' ? 'hold' : 'confirmed',
           notes: '',
-          createdAt: iso(Math.min(enquiredAt + (target === 'proposal_sent' ? proposalAfter : confirmAfter), nowMs)),
+          createdAt: iso(Math.min(enquiredAt + (target === 'proposal_sent' ? proposalAfter : acceptAfter), nowMs)),
         });
+        const ev = events[events.length - 1];
+        if (target !== 'proposal_sent') {
+          const paperwork = target === 'finalising' ? k : 3;
+          ev.agreementTemplateId = DEFAULT_AGREEMENT_TEMPLATES[0].id;
+          ev.agreementSentAt = iso(agreementSentAt);
+          ev.agreementSignedAt = paperwork >= 1 ? iso(agreementSignedAt) : null;
+          ev.signedName = paperwork >= 1 ? `${firstName} ${lastName}` : '';
+          ev.depositAmount = value;
+          ev.depositInvoiceSentAt = paperwork >= 2 ? iso(invoiceSentAt) : null;
+          ev.depositPaidAt = paperwork >= 3 ? iso(enquiredAt + confirmAfter) : null;
+        }
       }
 
       if (target === 'event_held' && eventDateMs) {
@@ -517,11 +568,14 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
     rules: { ...DEFAULT_RULES },
     templates: TEMPLATES.map((t) => ({ ...t })),
     trackingRules: DEFAULT_TRACKING_RULES.map((r) => ({ ...r })),
+    proposals,
+    proposalTemplates: DEFAULT_PROPOSAL_TEMPLATES.map((t) => ({ ...t })),
+    agreementTemplates: DEFAULT_AGREEMENT_TEMPLATES.map((t) => ({ ...t })),
   };
 }
 
 function order(s: Stage): number {
-  return ['prospect', 'lead', 'tour_booked', 'toured', 'proposal_sent', 'confirmed', 'event_held'].indexOf(s);
+  return ['prospect', 'lead', 'tour_booked', 'toured', 'proposal_sent', 'finalising', 'confirmed', 'event_held'].indexOf(s);
 }
 
 function pickEventType(rnd: ReturnType<typeof makeRandom>, stage: Stage): string {
