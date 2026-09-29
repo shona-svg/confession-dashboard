@@ -21,6 +21,7 @@ import { formatDate, formatMoney, formatMoneyShort, fullName } from '../lib/form
 import { Flags, OwnerDot, StageNum, Tags, useToast } from '../components/ui';
 import { LostModal } from '../components/modals';
 import { sum } from '../lib/metrics';
+import { EmailButton } from '../components/EmailComposer';
 
 export default function PipelinePage() {
   const { data, insights, moveStage } = useStore();
@@ -242,6 +243,7 @@ function CardBody({
         {insight.nextTour && c.stage === 'tour_booked' && (
           <span>Tour {formatDate(insight.nextTour.scheduledFor, 'd MMM')}</span>
         )}
+        {!overlay && <EmailButton contact={c} compact />}
       </div>
     </article>
   );

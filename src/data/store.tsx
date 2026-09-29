@@ -13,13 +13,17 @@ import type {
   Source,
   Stage,
   Tour,
+  EventType,
+  Rules,
   TourStatus,
+  TrackingRule,
   VenueEvent,
 } from './types';
-import { stageIndex } from '../lib/stages';
+import { RULES, stageIndex } from '../lib/stages';
+import type { EmailTemplate } from '../lib/templates';
 import { buildInsights, type Insight } from '../lib/metrics';
 
-const STORAGE_KEY = 'confession-dashboard-sample-v4';
+const STORAGE_KEY = 'confession-dashboard-sample-v5';
 /** Stand-in for "the signed-in team member" until login arrives in phase 3. */
 export const CURRENT_USER_ID = 'tm-sam';
 
@@ -77,6 +81,14 @@ export interface EnquiryInput {
   marketingOptIn: boolean;
 }
 
+/** What the newsletter ("Confession Disciples") form collects. */
+export interface NewsletterInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  interests: string[]; // Mailchimp group names the person picked
+}
+
 interface StoreValue {
   data: Dataset;
   insights: Map<string, Insight>;
@@ -93,6 +105,13 @@ interface StoreValue {
   bookEvent(contactId: string, input: EventInput): void;
   updateEvent(eventId: string, patch: Partial<EventInput>): void;
   submitEnquiry(input: EnquiryInput): string;
+  submitNewsletter(input: NewsletterInput): string;
+  updateRules(patch: Partial<Rules>): void;
+  saveEventType(et: EventType): void;
+  saveTemplate(t: EmailTemplate): void;
+  deleteTemplate(id: string): void;
+  saveTrackingRule(r: TrackingRule): void;
+  deleteTrackingRule(id: string): void;
   sendEmail(contactId: string, email: { fromId: string; subject: string; body: string; asksForGoogleReview?: boolean }): void;
   requestReview(contactId: string): void;
   resetSampleData(): void;
@@ -132,6 +151,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const dataRef = useRef(data);
   dataRef.current = data;
+  // Settings → Rules: make the saved values the ones every calculation uses.
+  Object.assign(RULES, data.rules);
   useEffect(() => save(data), [data]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
@@ -454,6 +475,108 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const submitNewsletter = useCallback((input: NewsletterInput) => {
+    const email = input.email.trim().toLowerCase();
+    const known = dataRef.current.contacts.find((c) => c.email.toLowerCase() === email);
+    const id = known?.id ?? newId('c');
+    const interestTags = input.interests.map((i) => `Interest: ${i}`);
+    setData((d) => {
+      const at = nowIso();
+      const joined: Activity = {
+        id: newId('act'),
+        contactId: id,
+        type: 'mailchimp_signup',
+        occurredAt: at,
+        summary: `Joined Confession Disciples on the website${input.interests.length ? ` (interested in ${input.interests.join(', ')})` : ''}`,
+        createdBy: 'Newsletter form',
+      };
+      const existing = d.contacts.find((c) => c.id === id);
+      if (existing) {
+        return {
+          ...d,
+          contacts: d.contacts.map((c) =>
+            c.id === id
+              ? { ...c, marketingConsent: 'subscribed' as const, tags: [...new Set([...c.tags, ...interestTags])] }
+              : c,
+          ),
+          activities: [...d.activities, joined],
+        };
+      }
+      const contact: Contact = {
+        id,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
+        email,
+        phone: '',
+        company: '',
+        eventTypeId: null,
+        audience: input.interests.some((i) => /corporate/i.test(i)) ? 'corporate' : input.interests.some((i) => /accessib/i.test(i)) ? 'accessibility' : 'milestone',
+        eventDate: null,
+        guestCount: null,
+        estimatedValue: null,
+        source: 'newsletter_form',
+        ownerId: null,
+        tags: interestTags,
+        stage: 'prospect',
+        lostReason: null,
+        lostReasonNote: '',
+        lostFromStage: null,
+        createdAt: at,
+        reviewRequestedAt: null,
+        reviewReceived: false,
+        acknowledgedAt: null,
+        accessibilityNeeds: '',
+        marketingConsent: 'subscribed',
+      };
+      return {
+        ...d,
+        contacts: [...d.contacts, contact],
+        stageChanges: [...d.stageChanges, { id: newId('sc'), contactId: id, fromStage: null, toStage: 'prospect', changedAt: at, changedBy: 'Newsletter form' }],
+        activities: [...d.activities, joined],
+      };
+    });
+    return id;
+  }, []);
+
+  const updateRules = useCallback((patch: Partial<Rules>) => {
+    setData((d) => ({ ...d, rules: { ...d.rules, ...patch } }));
+  }, []);
+
+  const saveEventType = useCallback((et: EventType) => {
+    setData((d) => ({
+      ...d,
+      eventTypes: d.eventTypes.some((x) => x.id === et.id)
+        ? d.eventTypes.map((x) => (x.id === et.id ? et : x))
+        : [...d.eventTypes.filter((x) => x.id !== 'other'), et, ...d.eventTypes.filter((x) => x.id === 'other')],
+    }));
+  }, []);
+
+  const saveTemplate = useCallback((t: EmailTemplate) => {
+    setData((d) => ({
+      ...d,
+      templates: d.templates.some((x) => x.id === t.id)
+        ? d.templates.map((x) => (x.id === t.id ? t : x))
+        : [...d.templates.filter((x) => x.id !== 'blank'), t, ...d.templates.filter((x) => x.id === 'blank')],
+    }));
+  }, []);
+
+  const deleteTemplate = useCallback((id: string) => {
+    setData((d) => ({ ...d, templates: d.templates.filter((x) => x.id !== id) }));
+  }, []);
+
+  const saveTrackingRule = useCallback((r: TrackingRule) => {
+    setData((d) => ({
+      ...d,
+      trackingRules: d.trackingRules.some((x) => x.id === r.id)
+        ? d.trackingRules.map((x) => (x.id === r.id ? r : x))
+        : [...d.trackingRules, r],
+    }));
+  }, []);
+
+  const deleteTrackingRule = useCallback((id: string) => {
+    setData((d) => ({ ...d, trackingRules: d.trackingRules.filter((x) => x.id !== id) }));
+  }, []);
+
   const requestReview = useCallback((contactId: string) => {
     setData((d) => ({
       ...d,
@@ -485,6 +608,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     updateEvent,
     submitEnquiry,
     sendEmail,
+    submitNewsletter,
+    updateRules,
+    saveEventType,
+    saveTemplate,
+    deleteTemplate,
+    saveTrackingRule,
+    deleteTrackingRule,
     requestReview,
     resetSampleData,
   };

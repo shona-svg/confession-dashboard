@@ -22,6 +22,20 @@ export default function FollowUpsPage() {
     .sort((a, b) => (b.daysSinceContact ?? 0) - (a.daysSinceContact ?? 0));
   const proposals = all.filter((i) => i.proposalOverdue);
 
+  // Recently back on the website or clicking EDM links, and not yet booked: a good moment to get in touch.
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const recentSignals = new Map<string, { at: number; summary: string }>();
+  for (const a of data.activities) {
+    if (a.type !== 'web_visit' && a.type !== 'edm_click') continue;
+    const at = new Date(a.occurredAt).getTime();
+    if (at < weekAgo) continue;
+    const prev = recentSignals.get(a.contactId);
+    if (!prev || at > prev.at) recentSignals.set(a.contactId, { at, summary: a.summary });
+  }
+  const warm = all
+    .filter((i) => recentSignals.has(i.contact.id) && (i.isOpen || i.contact.stage === 'prospect'))
+    .sort((a, b) => recentSignals.get(b.contact.id)!.at - recentSignals.get(a.contact.id)!.at);
+
   const row = (i: Insight, detail: string) => (
     <div className="list-row" key={i.contact.id} style={{ flexWrap: 'wrap' }}>
       <OwnerDot id={i.contact.ownerId} />
@@ -90,6 +104,20 @@ export default function FollowUpsPage() {
                 }`,
               ),
             )}
+          </div>
+        )}
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2 className="card-title">Back on the website</h2>
+          <span className="card-note">Prospects and open leads who visited the site or clicked an EDM link this week</span>
+        </div>
+        {warm.length === 0 ? (
+          <Empty title="Quiet week">Nobody open has been back on the website lately.</Empty>
+        ) : (
+          <div className="list">
+            {warm.map((i) => row(i, `${recentSignals.get(i.contact.id)!.summary} · ${timeAgo(recentSignals.get(i.contact.id)!.at)}`))}
           </div>
         )}
       </section>

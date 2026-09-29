@@ -6,6 +6,7 @@ import { formatDate, formatMoney, fullName, timeAgo } from '../lib/format';
 import { Empty, Flags, OwnerDot, StatusTag, Tags } from '../components/ui';
 import { ContactFormModal } from '../components/modals';
 import { PlusIcon } from '../components/Icons';
+import { EmailButton } from '../components/EmailComposer';
 
 type SortKey = 'name' | 'created' | 'eventDate' | 'value' | 'lastContact';
 
@@ -139,6 +140,7 @@ export default function ContactsPage() {
                   <th>Source</th>
                   <th>Owner</th>
                   {th('lastContact', 'Last contact')}
+                  <th><span className="sr-only">Email</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -170,6 +172,9 @@ export default function ContactsPage() {
                       <td><OwnerDot id={c.ownerId} /></td>
                       <td className="small muted" style={{ whiteSpace: 'nowrap' }}>
                         {i.lastContactAt ? timeAgo(i.lastContactAt) : '—'}
+                      </td>
+                      <td>
+                        <EmailButton contact={c} compact />
                       </td>
                     </tr>
                   );

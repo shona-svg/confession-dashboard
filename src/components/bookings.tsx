@@ -10,6 +10,7 @@ import { formatDate, formatMoney, fullName } from '../lib/format';
 import { Modal, OwnerDot, StatusTag, useToast } from './ui';
 import { TourForm } from './modals';
 import { TourCard } from './tours';
+import { EmailButton, EmailLink } from './EmailComposer';
 
 export const toYmd = (d: Date) => format(d, 'yyyy-MM-dd');
 
@@ -257,7 +258,10 @@ export function EventCard({ event, onEdit, showDate = true }: { event: VenueEven
       {clash && <span className="flag bad">Clash: another event this date</span>}
       <div className="bottom">
         <span className="num">{formatMoney(c.estimatedValue)}</span>
-        <OwnerDot id={c.ownerId} />
+        <span className="card-people">
+          <EmailButton contact={c} compact />
+          <OwnerDot id={c.ownerId} />
+        </span>
       </div>
       {event.status !== 'cancelled' && !past && (
         <div className="tour-actions">
@@ -344,7 +348,7 @@ export function BookingDetailModal({
       </div>
       <dl className="facts">
         {row('Phone', c.phone || '—')}
-        {row('Email', c.email || '—')}
+        {row('Email', <EmailLink contact={c} />)}
         {row('Event type', data.eventTypes.find((e) => e.id === c.eventTypeId)?.name ?? '—')}
         {row('Guests', c.guestCount ?? '—')}
         {row('Company', c.company || '—')}
@@ -379,6 +383,7 @@ export function BookingDetailModal({
         >
           Edit client details
         </button>
+        <EmailButton contact={c} label="Email client" />
         <Link to={`/contacts/${c.id}`} className="btn primary" onClick={onClose}>
           Open client profile
         </Link>

@@ -1,6 +1,6 @@
 // Every rule about stages, statuses, sources and lost reasons lives here, so a
 // change of wording or order only needs to happen in one place.
-import type { ActivityType, Audience, LostReason, Source, Stage, Status } from '../data/types';
+import type { ActivityType, Audience, LostReason, Rules, Source, Stage, Status } from '../data/types';
 
 /** The journey in order. Lost sits outside the order. */
 export const JOURNEY: Stage[] = [
@@ -74,6 +74,7 @@ export const SOURCES: { id: Source; label: string }[] = [
   { id: 'referral', label: 'Referral' },
   { id: 'wedding_expo', label: 'Wedding expo' },
   { id: 'mailchimp_signup', label: 'Mailchimp signup' },
+  { id: 'newsletter_form', label: 'Newsletter form' },
   { id: 'other', label: 'Other' },
 ];
 
@@ -125,6 +126,7 @@ export const ACTIVITY_LABEL: Record<ActivityType, string> = {
   mailchimp_signup: 'Mailchimp signup',
   edm_open: 'EDM opened',
   edm_click: 'EDM link clicked',
+  web_visit: 'Website visit',
 };
 
 export const SPACE_LABEL = {
@@ -133,7 +135,8 @@ export const SPACE_LABEL = {
 } as const;
 
 /** Rules from the Booking Journey Map and Marketing Strategy. */
-export const RULES = {
+/** Starting values for the rules, from the Booking Journey Map and Marketing Strategy. */
+export const DEFAULT_RULES: Rules = {
   followUpDays: 5,
   replyWithinHours: 24,
   proposalWithinHours: 48,
@@ -141,3 +144,9 @@ export const RULES = {
   /** Mailchimp signups show as new for this many days if nobody actions them. */
   newSignupDays: 7,
 };
+
+/**
+ * The rules currently in force. The store copies the values saved in Settings over
+ * these, so everything that reads RULES follows Settings.
+ */
+export const RULES: Rules = { ...DEFAULT_RULES };

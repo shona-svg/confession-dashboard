@@ -402,3 +402,22 @@ New contact fields: `accessibility_needs` (sensitive, only shown inside the dash
 6. Mailchimp two-way sync.
 7. Gmail: send from the dashboard, email history on the timeline. Google Calendar sync.
 8. README.
+
+---
+
+## 10. Added after the proposal (29 September 2026)
+
+- **Email from anywhere:** an Email button on pipeline cards, the contacts list, tour and event cards, the booking
+  details window and the Home lists. Clicking a client's email address also opens the email window.
+- **Editable Settings** (admins once login is on): Rules, Event types (add and rename), Email templates (add, edit,
+  delete), Mailchimp organisation, and Website tracking rules. Stored in `settings`, `email_templates` and
+  `tracking_rules`, each with change history.
+- **Disciples newsletter form** (`/forms/newsletter`): name, email, optional interests and a required consent tick.
+  Creates a Prospect, source "Newsletter form". Changes to forms go through Shona or Nic.
+- **Mailchimp organisation:** one audience, "Confession Disciples". Newsletter interests become **groups**. Persona,
+  event type, status, stage, source, website interest and team tags become **tags**. Segments are built from these.
+- **Website tracking (proposed, UI in preview):** a first-party script on the WordPress site records page views
+  under a Confession-only cookie, after cookie consent. Visits link to a contact when they submit a form or click a
+  tracked link in an EDM or dashboard email. Interest rules add tags and can alert the team. Anonymous visitors are
+  deleted after 90 days. Tables: `web_visitors`, `web_visits`.
+- **Documents and e-signing (proposed):** see the proposal document.

@@ -1,3 +1,5 @@
+import type { EmailTemplate } from '../lib/templates';
+
 // The shapes of the records the dashboard keeps. These mirror the database
 // tables described in docs/PLAN.md, so switching from sample data to Supabase
 // (phase 3) doesn't change the pages.
@@ -23,6 +25,7 @@ export type Source =
   | 'referral'
   | 'wedding_expo'
   | 'mailchimp_signup'
+  | 'newsletter_form'
   | 'other';
 
 export type LostReason =
@@ -134,7 +137,8 @@ export type ActivityType =
   | 'review_requested'
   | 'mailchimp_signup'
   | 'edm_open'
-  | 'edm_click';
+  | 'edm_click'
+  | 'web_visit';
 
 export interface Activity {
   id: string;
@@ -147,6 +151,23 @@ export interface Activity {
   detail?: string;
 }
 
+/** The adjustable rules, edited in Settings. */
+export interface Rules {
+  followUpDays: number;
+  replyWithinHours: number;
+  proposalWithinHours: number;
+  altarRoomCapacity: number;
+  newSignupDays: number;
+}
+
+/** Website tracking: a page address that tells us what someone is interested in. */
+export interface TrackingRule {
+  id: string;
+  match: string; // part of the page address, e.g. /functions/weddings
+  tag: string; // tag added to the contact (and synced to Mailchimp)
+  alert: boolean; // put them on the "Back on the website" list
+}
+
 export interface Dataset {
   team: TeamMember[];
   eventTypes: EventType[];
@@ -155,4 +176,7 @@ export interface Dataset {
   tours: Tour[];
   events: VenueEvent[];
   activities: Activity[];
+  rules: Rules;
+  templates: EmailTemplate[];
+  trackingRules: TrackingRule[];
 }

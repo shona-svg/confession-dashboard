@@ -4,6 +4,7 @@ import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import App from './App';
 import { StoreProvider } from './data/store';
 import { ToastProvider } from './components/ui';
+import { EmailProvider } from './components/EmailComposer';
 import './styles/app.css';
 
 // The clickable preview runs inside a sandboxed page, so it keeps its own
@@ -15,7 +16,9 @@ createRoot(document.getElementById('root')!).render(
     <Router>
       <StoreProvider>
         <ToastProvider>
-          <App />
+          <EmailProvider>
+            <App />
+          </EmailProvider>
         </ToastProvider>
       </StoreProvider>
     </Router>

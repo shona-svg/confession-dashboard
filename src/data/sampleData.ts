@@ -15,8 +15,11 @@ import type {
   StageChange,
   TeamMember,
   Tour,
+  TrackingRule,
   VenueEvent,
 } from './types';
+import { DEFAULT_RULES } from '../lib/stages';
+import { TEMPLATES } from '../lib/templates';
 
 export const SAMPLE_TEAM: TeamMember[] = [
   { id: 'tm-sam', name: 'Sam Porter', email: 'sam@example.com', role: 'admin' },
@@ -65,6 +68,26 @@ const PHONES = [
   '0491 570 313', '0491 570 737', '0491 571 266', '0491 571 491', '0491 571 804', '0491 572 549',
   '0491 572 665', '0491 572 983', '0491 573 770', '0491 573 087', '0491 574 118', '0491 574 632',
 ];
+/** Starting website-tracking rules (edited in Settings → Website tracking). */
+export const DEFAULT_TRACKING_RULES: TrackingRule[] = [
+  { id: 'tr-weddings', match: '/functions/weddings', tag: 'Browsed: Weddings & after-parties', alert: false },
+  { id: 'tr-corporate', match: '/functions/corporate', tag: 'Browsed: Corporate', alert: false },
+  { id: 'tr-birthdays', match: '/functions/birthdays', tag: 'Browsed: Milestone birthdays', alert: false },
+  { id: 'tr-access', match: '/accessibility', tag: 'Browsed: Accessibility', alert: false },
+  { id: 'tr-functions', match: '/functions', tag: 'Browsed: Functions', alert: true },
+  { id: 'tr-enquire', match: '/enquire', tag: 'Opened the enquiry page', alert: true },
+];
+
+const WEB_PAGES = [
+  'Functions › Weddings & after-parties',
+  'Functions › Corporate events',
+  'Functions › Milestone birthdays',
+  'Functions',
+  'Gallery',
+  'Accessibility',
+  'Enquire',
+];
+
 const CAMPAIGNS = [
   'Spring celebrations at Confession',
   'Christmas party dates are filling',
@@ -327,6 +350,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
       }
       if (target === 'prospect') {
         addEdm(cid, createdAt);
+        addWebVisits(cid, createdAt, k < 3);
         continue;
       }
 
@@ -341,6 +365,7 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
       if (target === 'lead') {
         if (k >= 4 && k % 2 === 0) act(cid, 'email_in', enquiredAt + replyAfter + 5 * HOUR, 'Thanks! Checking dates with my partner', 'Gmail sync');
         addEdm(cid, enquiredAt);
+        addWebVisits(cid, enquiredAt, k === 5 || k === 7);
         continue;
       }
 
@@ -442,6 +467,19 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
       }
 
       addEdm(cid, createdAt);
+      addWebVisits(cid, createdAt, target === 'proposal_sent' && k === 2);
+    }
+  }
+
+  // Pages people looked at on the Confession website after they were known to us.
+  function addWebVisits(cid: string, since: number, recent: boolean) {
+    if (!recent && !rnd.chance(0.3)) return;
+    const visits = recent ? rnd.int(1, 2) : rnd.int(1, 3);
+    for (let i = 0; i < visits; i++) {
+      const at = recent ? nowMs - rnd.between(0.2, 6) * DAY : Math.min(since + rnd.between(1, 50) * DAY, nowMs - DAY);
+      if (at < since) continue;
+      const pages = [rnd.pick(WEB_PAGES), rnd.pick(WEB_PAGES)].filter((v, n, a) => a.indexOf(v) === n);
+      act(cid, 'web_visit', at, `Viewed ${pages.length + rnd.int(0, 3)} pages, including ${pages.join(' and ')}`, 'Website tracking');
     }
   }
 
@@ -468,7 +506,18 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
     if (c) c.eventDate = ev.date;
   }
 
-  return { team: SAMPLE_TEAM, eventTypes: EVENT_TYPES, contacts, stageChanges, tours, events, activities };
+  return {
+    team: SAMPLE_TEAM,
+    eventTypes: EVENT_TYPES,
+    contacts,
+    stageChanges,
+    tours,
+    events,
+    activities,
+    rules: { ...DEFAULT_RULES },
+    templates: TEMPLATES.map((t) => ({ ...t })),
+    trackingRules: DEFAULT_TRACKING_RULES.map((r) => ({ ...r })),
+  };
 }
 
 function order(s: Stage): number {

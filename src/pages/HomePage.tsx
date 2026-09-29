@@ -10,6 +10,7 @@ import { BookTourModal, ContactFormModal } from '../components/modals';
 import { PlusIcon } from '../components/Icons';
 import { NewLeads } from '../components/NewLeads';
 import { format, isToday, isTomorrow } from 'date-fns';
+import { EmailButton } from '../components/EmailComposer';
 
 export default function HomePage() {
   const { data, insights, now } = useStore();
@@ -128,6 +129,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <Flags insight={i} compact />
+                  <EmailButton contact={i.contact} compact />
                 </div>
               ))}
             </div>
@@ -162,6 +164,7 @@ export default function HomePage() {
                         {c.guestCount ? ` · ${c.guestCount} guests` : ''}
                       </div>
                     </div>
+                    <EmailButton contact={c} compact />
                     <OwnerDot id={t.hostId} />
                   </div>
                 );
@@ -205,6 +208,7 @@ export default function HomePage() {
                 </div>
                 <Flags insight={i} compact />
                 <StatusTag stage={i.contact.stage} />
+                <EmailButton contact={i.contact} compact />
               </div>
             ))}
         </div>

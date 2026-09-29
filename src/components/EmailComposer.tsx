@@ -1,13 +1,15 @@
-import { useState, type FormEvent } from 'react';
+import { createContext, useCallback, useContext, useState, type FormEvent, type ReactNode } from 'react';
 import { useStore, CURRENT_USER_ID } from '../data/store';
 import type { Contact } from '../data/types';
-import { TEMPLATES, fillTemplate, suggestedTemplate } from '../lib/templates';
+import { fillTemplate, suggestedTemplate } from '../lib/templates';
 import { formatDateTime, fullName } from '../lib/format';
 import { Modal, useToast } from './ui';
+import { MailIcon } from './Icons';
 
 /** Write and send a one-to-one email. Live version: sent through the team member's own Gmail. */
 export function EmailComposer({ contact, initialTemplate, onClose }: { contact: Contact; initialTemplate?: string; onClose: () => void }) {
   const { data, insights, sendEmail } = useStore();
+  const TEMPLATES = data.templates;
   const toast = useToast();
   const insight = insights.get(contact.id);
   const eventTypeName = data.eventTypes.find((e) => e.id === contact.eventTypeId)?.name ?? null;
@@ -17,7 +19,7 @@ export function EmailComposer({ contact, initialTemplate, onClose }: { contact: 
 
   const start = initialTemplate ?? suggestedTemplate(contact.stage, !!insight?.nextTour, !!insight?.firstReplyAt);
   const fill = (id: string, senderName: string) => {
-    const t = TEMPLATES.find((x) => x.id === id) ?? TEMPLATES[TEMPLATES.length - 1];
+    const t = TEMPLATES.find((x) => x.id === id) ?? TEMPLATES.at(-1) ?? { subject: '', body: '' };
     const v = { contact, eventTypeName, tourDate, senderName };
     return { subject: fillTemplate(t.subject, v), body: fillTemplate(t.body, v) };
   };
@@ -129,5 +131,55 @@ export function EmailComposer({ contact, initialTemplate, onClose }: { contact: 
         </div>
       </form>
     </Modal>
+  );
+}
+
+// ---------- Open the email window from anywhere ----------
+
+const EmailContext = createContext<(contact: Contact, template?: string) => void>(() => {});
+
+/** Wraps the app so any page can open "Email client" for a contact. */
+export function EmailProvider({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState<{ contact: Contact; template?: string } | null>(null);
+  const openEmail = useCallback((contact: Contact, template?: string) => setOpen({ contact, template }), []);
+  return (
+    <EmailContext.Provider value={openEmail}>
+      {children}
+      {open && <EmailComposer contact={open.contact} initialTemplate={open.template} onClose={() => setOpen(null)} />}
+    </EmailContext.Provider>
+  );
+}
+
+export const useEmailClient = () => useContext(EmailContext);
+
+/** A small "Email" button for any place a client appears. */
+export function EmailButton({ contact, label = 'Email', compact = false }: { contact: Contact; label?: string; compact?: boolean }) {
+  const openEmail = useEmailClient();
+  return (
+    <button
+      type="button"
+      className={compact ? 'icon-btn' : 'btn small'}
+      title={`Email ${contact.firstName}`}
+      aria-label={`Email ${contact.firstName} ${contact.lastName}`.trim()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation();
+        openEmail(contact);
+      }}
+    >
+      <MailIcon size={compact ? 15 : 14} />
+      {!compact && label}
+    </button>
+  );
+}
+
+/** A client's email address that opens the email window when clicked. */
+export function EmailLink({ contact }: { contact: Contact }) {
+  const openEmail = useEmailClient();
+  if (!contact.email) return <>—</>;
+  return (
+    <button type="button" className="link-btn email-link" onClick={() => openEmail(contact)} title="Write an email">
+      {contact.email}
+    </button>
   );
 }

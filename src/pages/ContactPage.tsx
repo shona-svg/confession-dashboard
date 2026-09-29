@@ -16,7 +16,7 @@ import { Empty, Flags, OwnerDot, StageNum, StatusTag, useToast } from '../compon
 import { BookTourModal, ContactFormModal, LogActivityModal, LostModal } from '../components/modals';
 import { ClientJourney } from '../components/ClientJourney';
 import { EmailComposer } from '../components/EmailComposer';
-import { CONSENT_LABEL, mailchimpTags } from '../lib/mailchimp';
+import { CONSENT_LABEL, mailchimpRecord } from '../lib/mailchimp';
 import type { MarketingConsent } from '../data/types';
 import { RescheduleModal, TourCard } from '../components/tours';
 import { EditEventModal, EventCard, NewBookingModal } from '../components/bookings';
@@ -31,6 +31,7 @@ import {
   StarIcon,
   StepIcon,
 } from '../components/Icons';
+import { EmailLink } from '../components/EmailComposer';
 
 type ModalKind =
   | { kind: 'log'; type: ActivityType }
@@ -40,7 +41,7 @@ type ModalKind =
   | { kind: 'lost' }
   | { kind: 'email' };
 
-const CLIENT_TYPES: ActivityType[] = ['form_submission', 'email_in', 'edm_open', 'edm_click', 'mailchimp_signup'];
+const CLIENT_TYPES: ActivityType[] = ['form_submission', 'email_in', 'edm_open', 'edm_click', 'mailchimp_signup', 'web_visit'];
 
 function iconFor(type: ActivityType | 'stage') {
   switch (type) {
@@ -54,6 +55,7 @@ function iconFor(type: ActivityType | 'stage') {
     case 'mailchimp_signup':
       return MailIcon;
     case 'edm_click':
+    case 'web_visit':
       return CursorIcon;
     case 'form_submission':
     case 'proposal_sent':
@@ -267,7 +269,9 @@ export default function ContactPage() {
             <dl className="facts">
               <div>
                 <dt>Email</dt>
-                <dd>{c.email || '—'}</dd>
+                <dd>
+                  <EmailLink contact={c} />
+                </dd>
               </div>
               <div>
                 <dt>Phone</dt>
@@ -431,16 +435,34 @@ export default function ContactPage() {
               </span>
             </div>
             {c.marketingConsent === 'subscribed' ? (
-              <>
-                <p className="small muted" style={{ marginTop: 0 }}>These tags keep their Mailchimp record up to date for EDMs:</p>
-                <div className="tag-editor">
-                  {mailchimpTags(c, data.eventTypes.find((e) => e.id === c.eventTypeId)?.name ?? null).map((t) => (
-                    <span key={t} className="tag plain">
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </>
+              (() => {
+                const mc = mailchimpRecord(c, data.eventTypes.find((e) => e.id === c.eventTypeId)?.name ?? null);
+                return (
+                  <>
+                    <p className="small muted" style={{ marginTop: 0 }}>
+                      On the <strong>{mc.audience}</strong> list. These keep their Mailchimp record sorted for EDMs:
+                    </p>
+                    {mc.groups.length > 0 && (
+                      <div className="tag-editor" style={{ marginBottom: 8 }}>
+                        <span className="small muted">Groups:</span>
+                        {mc.groups.map((g) => (
+                          <span key={g} className="tag status-Client">
+                            {g}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="tag-editor">
+                      <span className="small muted">Tags:</span>
+                      {mc.tags.map((t) => (
+                        <span key={t} className="tag plain">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                );
+              })()
             ) : (
               <p className="small muted" style={{ marginTop: 0 }}>
                 {c.marketingConsent === 'unsubscribed'

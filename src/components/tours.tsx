@@ -6,6 +6,7 @@ import type { Tour, TourStatus } from '../data/types';
 import { STAGE_LABEL } from '../lib/stages';
 import { formatDate, formatDateTime, formatTime, fullName, toLocalInput } from '../lib/format';
 import { Modal, OwnerDot, useToast } from './ui';
+import { EmailButton } from './EmailComposer';
 
 const STATUS_LABEL: Record<TourStatus, string> = {
   booked: 'Booked',
@@ -66,7 +67,10 @@ export function TourCard({ tour, onReschedule, showDate = false }: { tour: Tour;
         <span>
           Booked {formatDate(tour.bookedAt, 'd MMM')} · {ahead} {ahead === 1 ? 'day' : 'days'} ahead
         </span>
-        <OwnerDot id={tour.hostId} />
+        <span className="card-people">
+          <EmailButton contact={c} compact />
+          <OwnerDot id={tour.hostId} />
+        </span>
       </div>
       {tour.status === 'booked' && (
         <div className="tour-actions">

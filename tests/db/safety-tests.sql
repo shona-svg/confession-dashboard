@@ -205,3 +205,53 @@ begin
 end $$;
 
 \echo 'All data-safety checks passed'
+
+-- ---------- Settings and website tracking (second migration) ----------
+select pg_temp.act_as('00000000-0000-0000-0000-00000000000b');
+set role authenticated;
+do $$ begin
+  perform pg_temp.expect((select count(*) from public.email_templates) >= 0 and (select count(*) from public.tracking_rules) = 6,
+    'the team can read settings and tracking rules');
+  update public.tracking_rules set alert = false;
+  perform pg_temp.expect((select count(*) from public.tracking_rules where alert) = 2, 'a member cannot change tracking rules');
+  update public.settings set value = '{}' where key = 'rules';
+  perform pg_temp.expect((select value ->> 'followUpDays' from public.settings where key = 'rules') = '5', 'a member cannot change the rules');
+  begin
+    insert into public.web_visits (visitor_id, page_path) values ('abcdefghijklmnop', '/functions');
+    raise exception 'FAILED: member wrote website visits';
+  exception when insufficient_privilege then
+    perform pg_temp.expect(true, 'only the server can record website visits');
+  end;
+end $$;
+reset role;
+
+select pg_temp.act_as('00000000-0000-0000-0000-00000000000a');
+set role authenticated;
+do $$ begin
+  update public.settings set value = jsonb_set(value, '{followUpDays}', '4') where key = 'rules';
+  perform pg_temp.expect((select value ->> 'followUpDays' from public.settings where key = 'rules') = '4', 'an admin can change the rules');
+  perform pg_temp.expect(exists (select 1 from public.audit_log where table_name = 'settings' and record_key = 'rules'), '...and the change is in the history');
+end $$;
+reset role;
+
+do $$
+declare
+  cid uuid;
+  n int;
+begin
+  perform set_config('request.jwt.claim.sub', '', false);
+  insert into public.contacts (first_name, email) values ('Visitor', 'visitor@example.com') returning id into cid;
+  insert into public.web_visitors (visitor_id, contact_id, last_seen) values ('known-visitor-0001', cid, now() - interval '200 days');
+  insert into public.web_visitors (visitor_id, last_seen) values ('anon-visitor-00001', now() - interval '100 days');
+  insert into public.web_visitors (visitor_id, last_seen) values ('anon-visitor-00002', now() - interval '10 days');
+  insert into public.web_visits (visitor_id, contact_id, page_path) values ('known-visitor-0001', cid, '/functions/corporate');
+  insert into public.web_visits (visitor_id, page_path) values ('anon-visitor-00001', '/gallery');
+  n := public.purge_anonymous_visits();
+  perform pg_temp.expect(n = 1, 'anonymous visitors older than 90 days are removed');
+  perform pg_temp.expect(exists (select 1 from public.web_visitors where visitor_id = 'known-visitor-0001'), 'known contacts keep their visit history');
+  perform public.forget_contact(cid);
+  perform pg_temp.expect(not exists (select 1 from public.web_visits where contact_id = cid) and not exists (select 1 from public.web_visitors where visitor_id = 'known-visitor-0001'),
+    'a privacy delete removes their website history too');
+end $$;
+
+\echo 'Settings and tracking checks passed'
