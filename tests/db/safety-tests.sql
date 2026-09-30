@@ -289,3 +289,105 @@ end $$;
 reset role;
 
 \echo 'Proposal and agreement checks passed'
+
+-- ---------- Job applications (fourth migration) ----------
+do $$
+declare
+  aid uuid;
+begin
+  perform set_config('request.jwt.claim.sub', '', false);
+  -- As the website form's server function would.
+  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name)
+  values ('Tahlia', 'Brennan', 'tahlia@example.com', '0491 570 150', array['Bar staff'], 'a/resume.pdf', 'resume.pdf')
+  returning id into aid;
+  perform set_config('app.test_application', aid::text, false);
+  begin
+    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name)
+    values ('No', 'Role', 'norole@example.com', '0491 570 151', '{}', 'b/resume.pdf', 'resume.pdf');
+    raise exception 'FAILED: application without a role was accepted';
+  exception when check_violation then
+    perform pg_temp.expect(true, 'an application needs at least one role');
+  end;
+end $$;
+
+-- Someone on the website, not signed in
+set role anon;
+do $$
+begin
+  perform pg_temp.expect((select count(*) from public.job_applications) = 0, 'the public can''t read applications');
+  begin
+    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name)
+    values ('Sneaky', 'Bot', 'bot@example.com', '0491 570 152', array['Glassy'], 'x', 'x.pdf');
+    raise exception 'FAILED: anonymous insert worked';
+  exception when insufficient_privilege then
+    perform pg_temp.expect(true, 'the public can''t write applications directly (only the form''s server function can)');
+  end;
+end $$;
+reset role;
+
+select pg_temp.act_as('00000000-0000-0000-0000-00000000000c');
+set role authenticated;
+do $$ begin
+  perform pg_temp.expect((select count(*) from public.job_applications) = 0, 'a stranger with a login can''t see applications');
+end $$;
+reset role;
+
+select pg_temp.act_as('00000000-0000-0000-0000-00000000000b');
+set role authenticated;
+do $$
+declare aid uuid := current_setting('app.test_application')::uuid;
+begin
+  perform pg_temp.expect((select count(*) from public.job_applications) = 1, 'the team can see applications');
+  update public.job_applications set status = 'interview', notes = 'Trial shift Friday' where id = aid;
+  perform pg_temp.expect((select status from public.job_applications where id = aid) = 'interview', 'the team can update status and notes');
+  begin
+    delete from public.job_applications where id = aid;
+    raise exception 'FAILED: member deleted an application';
+  exception when insufficient_privilege then
+    perform pg_temp.expect(true, 'a member can''t permanently delete an application');
+  end;
+  begin
+    perform count(*) from public.storage_cleanup;
+    raise exception 'FAILED: member read the clean-up queue';
+  exception when insufficient_privilege then
+    perform pg_temp.expect(true, 'the file clean-up queue is hidden from the app');
+  end;
+  perform public.bin_application(aid);
+  perform pg_temp.expect((select count(*) from public.job_applications where id = aid) = 0, 'a member can move an application to the bin');
+  begin
+    perform public.purge_job_applications();
+    raise exception 'FAILED: member ran the clean-up';
+  exception when insufficient_privilege then
+    perform pg_temp.expect(true, 'a member can''t run the application clean-up');
+  end;
+end $$;
+reset role;
+
+do $$
+declare
+  aid uuid := current_setting('app.test_application')::uuid;
+  old_id uuid;
+  hired_id uuid;
+  n int;
+begin
+  perform set_config('request.jwt.claim.sub', '', false);
+  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, submitted_at)
+  values ('Old', 'Applicant', 'old@example.com', '0491 570 153', array['Glassy'], 'c/resume.pdf', 'resume.pdf', 'c/cover.pdf', 'cover.pdf', now() - interval '13 months')
+  returning id into old_id;
+  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, status, submitted_at)
+  values ('Hired', 'Person', 'hired@example.com', '0491 570 154', array['Bar staff'], 'd/resume.pdf', 'resume.pdf', 'hired', now() - interval '13 months')
+  returning id into hired_id;
+  n := public.purge_job_applications();
+  perform pg_temp.expect(n = 1, 'applications older than 12 months are removed');
+  perform pg_temp.expect(not exists (select 1 from public.job_applications where id = old_id), '...and they are gone');
+  perform pg_temp.expect(exists (select 1 from public.job_applications where id = hired_id), '...unless the person was hired');
+  perform pg_temp.expect(exists (select 1 from public.job_applications where id = aid), 'something binned today stays in the bin for 30 days');
+  perform pg_temp.expect((select count(*) from public.storage_cleanup where path in ('c/resume.pdf', 'c/cover.pdf')) = 2,
+    'their resume and cover letter are queued for deletion from file storage');
+  perform pg_temp.expect(not exists (select 1 from public.audit_log where record_id = old_id), '...and removed from the change history');
+  perform public.forget_application(aid);
+  perform pg_temp.expect(not exists (select 1 from public.job_applications where id = aid)
+    and not exists (select 1 from public.audit_log where record_id = aid), 'a privacy delete removes an application and its history');
+end $$;
+
+\echo 'Job application checks passed'

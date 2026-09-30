@@ -5,10 +5,12 @@
 import type {
   Activity,
   ActivityType,
+  ApplicationStatus,
   Audience,
   Contact,
   Dataset,
   EventType,
+  JobApplication,
   LostReason,
   Source,
   Stage,
@@ -571,7 +573,34 @@ export function generateSampleData(nowMs: number = Date.now()): Dataset {
     proposals,
     proposalTemplates: DEFAULT_PROPOSAL_TEMPLATES.map((t) => ({ ...t })),
     agreementTemplates: DEFAULT_AGREEMENT_TEMPLATES.map((t) => ({ ...t })),
+    applications: sampleApplications(nowMs),
   };
+}
+
+// A handful of made-up job applications for the Work with us inbox.
+function sampleApplications(nowMs: number): JobApplication[] {
+  const rows: [string, string, string[], number, ApplicationStatus, string, boolean][] = [
+    ['Tahlia', 'Brennan', ['Bar staff', 'Glassy'], 0.2, 'new', 'RSA current. Weekends and Friday nights suit best.', true],
+    ['Marcus', 'Oyelaran', ['Sound & lighting engineer'], 1.5, 'new', 'Five years running FOH for touring bands. Happy to send a showreel.', true],
+    ['Ella', 'Vukovic', ['Kitchen & event staff'], 4, 'reviewing', '', false],
+    ['Josh', 'Ngata', ['Door staff'], 9, 'interview', 'Security licence and first aid. Available most nights.', true],
+    ['Priyanka', 'Dass', ['Bar staff'], 21, 'hired', 'Cocktail bar experience in the city.', false],
+    ['Leo', 'Castellano', ['Promoters'], 35, 'not_suitable', '', false],
+  ];
+  return rows.map(([first, last, roles, daysAgo, status, message, cover], i) => ({
+    id: `app-${i + 1}`,
+    firstName: first,
+    lastName: last,
+    email: `${first}.${last}@example.com`.toLowerCase(),
+    mobile: `0491 570 ${String(150 + i * 7).padStart(3, '0')}`,
+    roles,
+    message,
+    resume: { name: `${first}-${last}-resume.pdf`, size: 120_000 + i * 31_000, type: 'application/pdf' },
+    coverLetter: cover ? { name: `${first}-${last}-cover-letter.pdf`, size: 60_000 + i * 9_000, type: 'application/pdf' } : null,
+    submittedAt: new Date(nowMs - daysAgo * DAY).toISOString(),
+    status,
+    notes: status === 'interview' ? 'Trial shift booked for Friday.' : '',
+  }));
 }
 
 function order(s: Stage): number {

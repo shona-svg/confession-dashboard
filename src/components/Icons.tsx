@@ -94,6 +94,12 @@ export const FormIcon = (p: P) => (
     <path d="M8 8h8M8 12h8M8 16h5" />
   </Base>
 );
+export const BriefcaseIcon = (p: P) => (
+  <Base {...p}>
+    <rect x="3.5" y="7.5" width="17" height="12" rx="2" />
+    <path d="M9 7.5V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v1.5M3.5 12.5h17" />
+  </Base>
+);
 export const StepIcon = (p: P) => (
   <Base {...p}>
     <path d="M5 12h12M13 7l5 5-5 5" />

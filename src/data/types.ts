@@ -222,6 +222,33 @@ export interface TrackingRule {
   alert: boolean; // put them on the "Back on the website" list
 }
 
+/** A file someone attached to a form. The live version keeps the file itself in private storage. */
+export interface AttachedFile {
+  name: string;
+  size: number;
+  type: string;
+  /** Preview only: a temporary in-browser link so the team can open it. Never saved. */
+  url?: string;
+}
+
+export type ApplicationStatus = 'new' | 'reviewing' | 'interview' | 'hired' | 'not_suitable';
+
+/** A "Work with us" job application. Kept apart from sales contacts and never sent to Mailchimp. */
+export interface JobApplication {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobile: string;
+  roles: string[];
+  message: string;
+  resume: AttachedFile;
+  coverLetter: AttachedFile | null;
+  submittedAt: string;
+  status: ApplicationStatus;
+  notes: string;
+}
+
 export interface Dataset {
   team: TeamMember[];
   eventTypes: EventType[];
@@ -236,4 +263,5 @@ export interface Dataset {
   proposals: Proposal[];
   proposalTemplates: ProposalTemplate[];
   agreementTemplates: AgreementTemplate[];
+  applications: JobApplication[];
 }

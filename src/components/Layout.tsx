@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoWhite from '../../brand/confession-logo-white.svg';
 import { useStore } from '../data/store';
-import { BellIcon, BoardIcon, CalendarIcon, ChartIcon, CloseIcon, CogIcon, FormIcon, HomeIcon, MenuIcon, PeopleIcon } from './Icons';
+import { BellIcon, BoardIcon, CalendarIcon, ChartIcon, CloseIcon, CogIcon, FormIcon, HomeIcon, BriefcaseIcon, MenuIcon, PeopleIcon } from './Icons';
 
 export default function Layout() {
   const { insights, data, now, resetSampleData } = useStore();
@@ -21,6 +21,8 @@ export default function Layout() {
     return t.status === 'booked' && d.toDateString() === new Date(now).toDateString();
   }).length;
 
+  const newApplications = data.applications.filter((a) => a.status === 'new').length;
+
   const links = [
     { to: '/', label: 'Home', icon: HomeIcon, end: true, count: newLeads || undefined },
     { to: '/pipeline', label: 'Pipeline', icon: BoardIcon },
@@ -29,6 +31,7 @@ export default function Layout() {
     { to: '/follow-ups', label: 'Follow-ups', icon: BellIcon, count: followUps || undefined },
     { to: '/reports', label: 'Reports', icon: ChartIcon },
     { to: '/forms', label: 'Forms', icon: FormIcon },
+    { to: '/applications', label: 'Applications', icon: BriefcaseIcon, count: newApplications || undefined },
     { to: '/settings', label: 'Settings', icon: CogIcon },
   ];
 

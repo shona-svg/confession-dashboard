@@ -8,6 +8,8 @@ import BookingsPage from './pages/BookingsPage';
 import FormsPage from './pages/FormsPage';
 import PublicEnquiryPage from './pages/PublicEnquiryPage';
 import PublicNewsletterPage from './pages/PublicNewsletterPage';
+import PublicJobsPage from './pages/PublicJobsPage';
+import ApplicationsPage from './pages/ApplicationsPage';
 import FollowUpsPage from './pages/FollowUpsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -15,9 +17,10 @@ import SettingsPage from './pages/SettingsPage';
 export default function App() {
   return (
     <Routes>
-      {/* Public: the embeddable enquiry form. Everything else sits behind login from phase 3. */}
+      {/* Public: the embeddable forms. Everything else sits behind login from phase 3. */}
       <Route path="forms/enquiry" element={<PublicEnquiryPage />} />
       <Route path="forms/newsletter" element={<PublicNewsletterPage />} />
+      <Route path="forms/jointheteam" element={<PublicJobsPage />} />
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="pipeline" element={<PipelinePage />} />
@@ -26,6 +29,7 @@ export default function App() {
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="tours" element={<Navigate to="/bookings" replace />} />
         <Route path="forms" element={<FormsPage />} />
+        <Route path="applications" element={<ApplicationsPage />} />
         <Route path="follow-ups" element={<FollowUpsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -15,6 +15,7 @@ import type {
   Tour,
   AgreementTemplate,
   EventType,
+  JobApplication,
   Proposal,
   ProposalTemplate,
   Rules,
@@ -27,7 +28,7 @@ import type { EmailTemplate } from '../lib/templates';
 import { bookingEvent } from '../lib/booking';
 import { buildInsights, type Insight } from '../lib/metrics';
 
-const STORAGE_KEY = 'confession-dashboard-sample-v6';
+const STORAGE_KEY = 'confession-dashboard-sample-v7';
 /** Stand-in for "the signed-in team member" until login arrives in phase 3. */
 export const CURRENT_USER_ID = 'tm-sam';
 
@@ -43,7 +44,13 @@ function load(): Dataset {
 
 function save(data: Dataset) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    // In-browser file links only last for this visit, so they're never saved.
+    const applications = data.applications.map(({ resume, coverLetter, ...a }) => ({
+      ...a,
+      resume: { ...resume, url: undefined },
+      coverLetter: coverLetter ? { ...coverLetter, url: undefined } : null,
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, applications }));
   } catch {
     // Not fatal: changes just won't survive a reload.
   }
@@ -93,6 +100,8 @@ export interface NewsletterInput {
   interests: string[]; // Mailchimp group names the person picked
 }
 
+export type ApplicationInput = Pick<JobApplication, 'firstName' | 'lastName' | 'email' | 'mobile' | 'roles' | 'message' | 'resume' | 'coverLetter'>;
+
 export interface OutgoingEmail {
   fromId: string;
   subject: string;
@@ -116,6 +125,9 @@ interface StoreValue {
   updateEvent(eventId: string, patch: Partial<EventInput>): void;
   submitEnquiry(input: EnquiryInput): string;
   submitNewsletter(input: NewsletterInput): string;
+  submitApplication(input: ApplicationInput): string;
+  updateApplication(id: string, patch: Partial<Pick<JobApplication, 'status' | 'notes'>>): void;
+  deleteApplication(id: string): void;
   updateRules(patch: Partial<Rules>): void;
   saveEventType(et: EventType): void;
   saveTemplate(t: EmailTemplate): void;
@@ -788,6 +800,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const submitApplication = useCallback((input: ApplicationInput) => {
+    const id = newId('app');
+    const application: JobApplication = {
+      ...input,
+      id,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      email: input.email.trim().toLowerCase(),
+      mobile: input.mobile.trim(),
+      message: input.message.trim(),
+      submittedAt: nowIso(),
+      status: 'new',
+      notes: '',
+    };
+    setData((d) => ({ ...d, applications: [application, ...d.applications] }));
+    return id;
+  }, []);
+
+  const updateApplication = useCallback((id: string, patch: Partial<Pick<JobApplication, 'status' | 'notes'>>) => {
+    setData((d) => ({ ...d, applications: d.applications.map((a) => (a.id === id ? { ...a, ...patch } : a)) }));
+  }, []);
+
+  const deleteApplication = useCallback((id: string) => {
+    setData((d) => ({ ...d, applications: d.applications.filter((a) => a.id !== id) }));
+  }, []);
+
   const resetSampleData = useCallback(() => {
     const fresh = applyAutomaticMoves(generateSampleData());
     setNow(Date.now());
@@ -812,6 +850,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     submitEnquiry,
     sendEmail,
     submitNewsletter,
+    submitApplication,
+    updateApplication,
+    deleteApplication,
     updateRules,
     saveEventType,
     saveTemplate,

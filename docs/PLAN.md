@@ -442,3 +442,23 @@ New stage between Proposal sent and Confirmed: **Finalising** (proposal accepted
 Home shows "Bookings to finalise", pipeline cards show the paperwork step, and the Client journey includes
 "Signs the hire agreement" and "Pays the deposit: event is live". Database: `proposals`, `proposal_templates`,
 `agreement_templates`, `signing_links`, and paperwork columns on `events`.
+
+## 12. Work with us: job applications (30 September 2026)
+
+A third form on the Forms page, replacing the HubSpot form on confessionportadelaide.com/jointheteam. It asks
+the same questions (first name, last name, email, mobile, job roles, resume, message) and adds an optional
+cover letter.
+
+- **Roles:** Bar staff, Door staff, Glassy, Kitchen & event staff, Promoters, Sound & lighting engineer. At least one is required.
+- **Files:** PDF or Word only, up to 5 MB each. The form checks this before sending, and the file store enforces it again.
+- **Where it goes:** a separate **Applications** page (sidebar), with a status for each person (New, Reviewing,
+  Interview, Hired, Not suitable) and private team notes. Applicants never become sales contacts and are never sent to Mailchimp.
+- **Privacy:** files sit in a private Supabase Storage bucket (`job-applications`). The team opens them with
+  short-lived links, and they never go into email. Applications are deleted automatically 12 months after they
+  arrive unless the person is hired (nightly job, after the backup). The bin and privacy deletes work the same
+  way as for contacts. Deleted files are queued in `storage_cleanup` for the clean-up function to remove.
+- **Live version (phase 4):** the form posts to a Netlify Function, which checks the file type and size,
+  uploads the files with the server key and saves the row. The browser never holds a key.
+- **Embedding:** the Forms page gives WordPress embed code with a small script, so the frame resizes to fit the
+  form on phones, tablets and computers, with no scrollbar inside the page. All three forms work this way.
+- **Database:** `supabase/migrations/20260930000001_job_applications.sql`, covered by `npm run test:db`.

@@ -62,13 +62,15 @@ jobs:
         if: steps.setup.outputs.ready == 'true'
         run: scripts/backup/upload.sh
 
-      - name: Empty the bin and old anonymous visits (only after the backup is safely stored)
+      - name: Empty the bin, old anonymous visits and old job applications (only after the backup is safely stored)
         if: steps.setup.outputs.ready == 'true'
         run: |
           n="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "select public.purge_bin()")"
           echo "Contacts permanently removed from the bin (older than 30 days): $n" | tee -a "$GITHUB_STEP_SUMMARY"
           v="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "select public.purge_anonymous_visits()")"
           echo "Anonymous website visitors removed (not seen for 90 days): $v" | tee -a "$GITHUB_STEP_SUMMARY"
+          j="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "select public.purge_job_applications()")"
+          echo "Job applications removed (binned 30+ days, or 12+ months old and not hired): $j" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Monday summary
         if: steps.setup.outputs.ready == 'true' && github.event_name == 'schedule' && env.ALERT_TO != ''
