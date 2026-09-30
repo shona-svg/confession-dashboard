@@ -28,6 +28,14 @@ jobs:
       RCLONE_CONFIG_GDRIVE_SCOPE: drive
       RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_CREDENTIALS: ${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON }}
       RCLONE_CONFIG_GDRIVE_TEAM_DRIVE: ${{ secrets.GDRIVE_SHARED_DRIVE_ID }}
+      # Supabase file storage (resumes and cover letters), read through its S3 connection.
+      RCLONE_CONFIG_SUPA_TYPE: s3
+      RCLONE_CONFIG_SUPA_PROVIDER: Other
+      RCLONE_CONFIG_SUPA_FORCE_PATH_STYLE: 'true'
+      RCLONE_CONFIG_SUPA_ENDPOINT: ${{ secrets.SUPABASE_S3_ENDPOINT }}
+      RCLONE_CONFIG_SUPA_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+      RCLONE_CONFIG_SUPA_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+      RCLONE_CONFIG_SUPA_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
       ALERT_SMTP_USER: ${{ secrets.ALERT_SMTP_USER }}
       ALERT_SMTP_APP_PASSWORD: ${{ secrets.ALERT_SMTP_APP_PASSWORD }}
       ALERT_TO: ${{ secrets.ALERT_TO }}
@@ -40,6 +48,12 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -z "$RCLONE_CONFIG_SUPA_ACCESS_KEY_ID" ]; then
+            echo "⚠️ Resume and cover letter files are NOT being backed up yet (file storage secrets missing)." >> "$GITHUB_STEP_SUMMARY"
+            echo "files=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "files=true" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/checkout@v4
@@ -62,6 +76,10 @@ jobs:
         if: steps.setup.outputs.ready == 'true'
         run: scripts/backup/upload.sh
 
+      - name: Back up resumes and cover letters (encrypted) and check they arrived
+        if: steps.setup.outputs.ready == 'true' && steps.setup.outputs.files == 'true'
+        run: scripts/backup/files.sh | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Empty the bin, old anonymous visits and old job applications (only after the backup is safely stored)
         if: steps.setup.outputs.ready == 'true'
         run: |
@@ -71,6 +89,10 @@ jobs:
           echo "Anonymous website visitors removed (not seen for 90 days): $v" | tee -a "$GITHUB_STEP_SUMMARY"
           j="$(psql "$DATABASE_URL" -X -A -t -v ON_ERROR_STOP=1 -c "select public.purge_job_applications()")"
           echo "Job applications removed (binned 30+ days, or 12+ months old and not hired): $j" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove files of deleted applications from storage (they stay on the Drive for 30 more days)
+        if: steps.setup.outputs.ready == 'true' && steps.setup.outputs.files == 'true'
+        run: scripts/backup/storage-cleanup.sh | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Monday summary
         if: steps.setup.outputs.ready == 'true' && github.event_name == 'schedule' && env.ALERT_TO != ''

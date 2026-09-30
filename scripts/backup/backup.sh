@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Nightly backup, step 1: export the database, check the export is readable,
-# record exact row counts, and encrypt it. Also writes a spreadsheet of contacts.
+# record exact row counts, and encrypt it. Also writes spreadsheets of contacts and job applications.
 #
 # Needs: DATABASE_URL (Supabase session-pooler connection string, read from a secret)
 #        BACKUP_PASSPHRASE (the backup encryption passphrase, read from a secret)
@@ -49,6 +49,15 @@ psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "\copy (
   where c.deleted_at is null
   order by c.created_at
 ) to '$OUT_DIR/contacts-$DAY.csv' with csv header"
+
+echo "Writing the job applications spreadsheet…"
+psql "$DATABASE_URL" -X -q -v ON_ERROR_STOP=1 -c "\copy (
+  select first_name, last_name, email, mobile, array_to_string(roles, ', ') as roles, message, status, notes,
+         resume_name, cover_letter_name, submitted_at
+  from public.job_applications
+  where deleted_at is null
+  order by submitted_at
+) to '$OUT_DIR/job-applications-$DAY.csv' with csv header"
 
 (cd "$OUT_DIR" && sha256sum "$NAME.dump.gpg" "$NAME.counts.json" > "$NAME.sha256")
 echo "$NAME" > "$OUT_DIR/latest-name"

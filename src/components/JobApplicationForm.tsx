@@ -1,5 +1,6 @@
 // The "Work with us" job application: the same questions as the current form on
-// confessionportadelaide.com/jointheteam, plus a cover letter. Shown on the Forms page,
+// confessionportadelaide.com/jointheteam, plus a cover letter. Every question is required.
+// Shown on the Forms page,
 // and on its own at /forms/jointheteam for embedding in the WordPress site.
 // Applications go to their own inbox. They never become sales contacts or go to Mailchimp.
 import { useId, useRef, useState, type DragEvent, type FormEvent, type RefObject } from 'react';
@@ -20,10 +21,13 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
   const [done, setDone] = useState<string | null>(null);
   const rolesRef = useRef<HTMLFieldSetElement>(null);
   const resumeRef = useRef<HTMLInputElement>(null);
+  const coverRef = useRef<HTMLInputElement>(null);
+  const messageRef = useRef<HTMLTextAreaElement>(null);
 
   const toggle = (r: string) => setRoles((cur) => (cur.includes(r) ? cur.filter((x) => x !== r) : [...cur, r]));
   const rolesMissing = tried && roles.length === 0;
   const resumeMissing = tried && !resume;
+  const coverMissing = tried && !cover;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -35,6 +39,14 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
     }
     if (!resume) {
       resumeRef.current?.focus();
+      return;
+    }
+    if (!cover) {
+      coverRef.current?.focus();
+      return;
+    }
+    if (!f.message.trim()) {
+      messageRef.current?.focus();
       return;
     }
     const attach = (file: File): AttachedFile => ({
@@ -51,7 +63,7 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
       roles,
       message: f.message,
       resume: attach(resume),
-      coverLetter: cover ? attach(cover) : null,
+      coverLetter: attach(cover),
     });
     setDone(f.firstName.trim() || 'there');
     onSubmitted?.(id, `${f.firstName} ${f.lastName}`.trim());
@@ -67,7 +79,7 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
       <div className="ef ef-done" role="status">
         <img src={confessionLogo} alt="Confession" className="ef-logo" />
         <h2 className="ef-title">Thanks, {done}. Application received</h2>
-        <p>We've got your details and resume. If your experience is a good fit, someone from the team will be in touch.</p>
+        <p>We've got your details, resume and cover letter. If your experience is a good fit, someone from the team will be in touch.</p>
         <button type="button" className="btn" onClick={() => setDone(null)}>
           Send another application
         </button>
@@ -81,7 +93,7 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
       <div>
         <h2 className="ef-title">Join our team</h2>
         <p className="ef-intro">
-          Thanks for your interest in working at Confession. Tell us a bit about yourself, attach your resume and we'll
+          Thanks for your interest in working at Confession. Tell us a bit about yourself, attach your resume and cover letter, and we'll
           get back to you.
         </p>
       </div>
@@ -142,15 +154,24 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
           file={resume}
           onChange={setResume}
           inputRef={resumeRef}
-          missing={resumeMissing}
+          missing={resumeMissing && 'Please attach your resume.'}
         />
-        <FilePicker id="jf-cover" label="Cover letter (optional)" file={cover} onChange={setCover} />
+        <FilePicker
+          id="jf-cover"
+          label="Cover letter *"
+          file={cover}
+          onChange={setCover}
+          inputRef={coverRef}
+          missing={coverMissing && 'Please attach your cover letter.'}
+        />
 
         <label className="field wide">
-          <span>Anything else we should know?</span>
+          <span>Tell us about your experience and availability *</span>
           <textarea
+            ref={messageRef}
             id="jf-message"
             className="textarea"
+            required
             rows={4}
             placeholder="Availability, licences (RSA, security, first aid), where you've worked before"
             value={f.message}
@@ -167,7 +188,7 @@ export function JobApplicationForm({ onSubmitted }: { onSubmitted?: (id: string,
         them, we never add you to our mailing list, and we delete them after {APPLICATION_KEEP_MONTHS} months unless you
         join the team. You can ask to see, correct or delete them at any time. See our privacy policy for more.
       </p>
-      <button type="submit" className="btn pink ef-submit">
+      <button type="submit" className="btn pink ef-submit" onClick={() => setTried(true)}>
         Send application
       </button>
     </form>
@@ -188,7 +209,7 @@ function FilePicker({
   file: File | null;
   onChange: (f: File | null) => void;
   inputRef?: RefObject<HTMLInputElement>;
-  missing?: boolean;
+  missing?: string | false;
 }) {
   const hintId = useId();
   const [problem, setProblem] = useState<string | null>(null);
@@ -210,7 +231,7 @@ function FilePicker({
     choose(e.dataTransfer.files?.[0]);
   };
 
-  const error = problem ?? (missing ? 'Please attach your resume.' : null);
+  const error = problem ?? (missing || null);
 
   return (
     <div className="field jf-file-field">

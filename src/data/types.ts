@@ -243,7 +243,7 @@ export interface JobApplication {
   roles: string[];
   message: string;
   resume: AttachedFile;
-  coverLetter: AttachedFile | null;
+  coverLetter: AttachedFile;
   submittedAt: string;
   status: ApplicationStatus;
   notes: string;

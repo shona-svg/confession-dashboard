@@ -28,7 +28,7 @@ import type { EmailTemplate } from '../lib/templates';
 import { bookingEvent } from '../lib/booking';
 import { buildInsights, type Insight } from '../lib/metrics';
 
-const STORAGE_KEY = 'confession-dashboard-sample-v7';
+const STORAGE_KEY = 'confession-dashboard-sample-v8';
 /** Stand-in for "the signed-in team member" until login arrives in phase 3. */
 export const CURRENT_USER_ID = 'tm-sam';
 
@@ -48,7 +48,7 @@ function save(data: Dataset) {
     const applications = data.applications.map(({ resume, coverLetter, ...a }) => ({
       ...a,
       resume: { ...resume, url: undefined },
-      coverLetter: coverLetter ? { ...coverLetter, url: undefined } : null,
+      coverLetter: { ...coverLetter, url: undefined },
     }));
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...data, applications }));
   } catch {

@@ -297,16 +297,30 @@ declare
 begin
   perform set_config('request.jwt.claim.sub', '', false);
   -- As the website form's server function would.
-  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name)
-  values ('Tahlia', 'Brennan', 'tahlia@example.com', '0491 570 150', array['Bar staff'], 'a/resume.pdf', 'resume.pdf')
+  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, message)
+  values ('Tahlia', 'Brennan', 'tahlia@example.com', '0491 570 150', array['Bar staff'], 'a/resume.pdf', 'resume.pdf', 'a/cover.pdf', 'cover.pdf', 'RSA current')
   returning id into aid;
   perform set_config('app.test_application', aid::text, false);
   begin
-    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name)
-    values ('No', 'Role', 'norole@example.com', '0491 570 151', '{}', 'b/resume.pdf', 'resume.pdf');
+    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, message)
+    values ('No', 'Role', 'norole@example.com', '0491 570 151', '{}', 'b/resume.pdf', 'resume.pdf', 'b/cover.pdf', 'cover.pdf', 'Hi');
     raise exception 'FAILED: application without a role was accepted';
   exception when check_violation then
     perform pg_temp.expect(true, 'an application needs at least one role');
+  end;
+  begin
+    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, message)
+    values ('No', 'Cover', 'nocover@example.com', '0491 570 155', array['Glassy'], 'e/resume.pdf', 'resume.pdf', 'Hi');
+    raise exception 'FAILED: application without a cover letter was accepted';
+  exception when not_null_violation then
+    perform pg_temp.expect(true, 'an application needs a cover letter');
+  end;
+  begin
+    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, message)
+    values ('No', 'Answer', 'noanswer@example.com', '0491 570 156', array['Glassy'], 'f/resume.pdf', 'resume.pdf', 'f/cover.pdf', 'cover.pdf', '   ');
+    raise exception 'FAILED: blank answer was accepted';
+  exception when check_violation then
+    perform pg_temp.expect(true, 'every question must be answered (a blank message is refused)');
   end;
 end $$;
 
@@ -316,8 +330,8 @@ do $$
 begin
   perform pg_temp.expect((select count(*) from public.job_applications) = 0, 'the public can''t read applications');
   begin
-    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name)
-    values ('Sneaky', 'Bot', 'bot@example.com', '0491 570 152', array['Glassy'], 'x', 'x.pdf');
+    insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, message)
+    values ('Sneaky', 'Bot', 'bot@example.com', '0491 570 152', array['Glassy'], 'x', 'x.pdf', 'y', 'y.pdf', 'Hi');
     raise exception 'FAILED: anonymous insert worked';
   exception when insufficient_privilege then
     perform pg_temp.expect(true, 'the public can''t write applications directly (only the form''s server function can)');
@@ -371,11 +385,11 @@ declare
   n int;
 begin
   perform set_config('request.jwt.claim.sub', '', false);
-  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, submitted_at)
-  values ('Old', 'Applicant', 'old@example.com', '0491 570 153', array['Glassy'], 'c/resume.pdf', 'resume.pdf', 'c/cover.pdf', 'cover.pdf', now() - interval '13 months')
+  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, message, submitted_at)
+  values ('Old', 'Applicant', 'old@example.com', '0491 570 153', array['Glassy'], 'c/resume.pdf', 'resume.pdf', 'c/cover.pdf', 'cover.pdf', 'Hi', now() - interval '13 months')
   returning id into old_id;
-  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, status, submitted_at)
-  values ('Hired', 'Person', 'hired@example.com', '0491 570 154', array['Bar staff'], 'd/resume.pdf', 'resume.pdf', 'hired', now() - interval '13 months')
+  insert into public.job_applications (first_name, last_name, email, mobile, roles, resume_path, resume_name, cover_letter_path, cover_letter_name, message, status, submitted_at)
+  values ('Hired', 'Person', 'hired@example.com', '0491 570 154', array['Bar staff'], 'd/resume.pdf', 'resume.pdf', 'd/cover.pdf', 'cover.pdf', 'Hi', 'hired', now() - interval '13 months')
   returning id into hired_id;
   n := public.purge_job_applications();
   perform pg_temp.expect(n = 1, 'applications older than 12 months are removed');

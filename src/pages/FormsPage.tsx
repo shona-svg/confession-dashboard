@@ -61,7 +61,7 @@ const FORMS: Record<FormKey, FormInfo> = {
     height: 1400,
     lands: 'Job applications, in their own inbox. Never in Contacts or New leads',
     mailchimp: ['Never added. Job applicants are not marketing contacts'],
-    privacy: `Resumes hold a lot of personal information, so they're treated carefully. Files are PDF or Word only, up to ${MAX_FILE_MB} MB, and kept in private storage that only logged-in team members can open, one link at a time. They're deleted automatically after ${APPLICATION_KEEP_MONTHS} months unless the person is hired. The form tells applicants all of this before they send.`,
+    privacy: `Resumes hold a lot of personal information, so they're treated carefully. Files are PDF or Word only, up to ${MAX_FILE_MB} MB, and kept in private storage that only logged-in team members can open, one link at a time. They're deleted automatically after ${APPLICATION_KEEP_MONTHS} months unless the person is hired. Everything, files included, is backed up nightly to the restricted Google Drive, encrypted. The form tells applicants all of this before they send.`,
   },
 };
 

@@ -30,7 +30,7 @@ if [ "$(date -u +%d)" = "01" ] || [ "${FORCE_MONTHLY:-}" = "1" ]; then
   echo "First of the month: keeping a monthly copy too…"
   copy_and_check "monthly"
 fi
-rclone copy "$OUT_DIR" "${REMOTE}spreadsheets" --include "contacts-*.csv"
+rclone copy "$OUT_DIR" "${REMOTE}spreadsheets" --include "contacts-*.csv" --include "job-applications-*.csv"
 
 echo "Clearing out old copies…"
 rclone delete "${REMOTE}daily" --min-age 31d

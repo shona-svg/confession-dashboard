@@ -36,9 +36,15 @@ If any one of them fails, another still has the data.
 3. It's uploaded to the shared drive, and checked again (with a checksum) to make sure it arrived intact.
 4. A contacts spreadsheet you can open in Google Sheets is saved alongside it. It leaves out sensitive
    fields such as accessibility needs.
-5. Only once all of that has worked, the bin is emptied of anything older than 30 days.
-6. Old copies are cleared out automatically. Kept: **30 nightly copies, 12 monthly copies**
-   (from the 1st of each month) and **7 spreadsheets**.
+5. A **job applications spreadsheet** is saved too (names, contact details, roles, answers, status and
+   file names).
+6. **Every resume and cover letter** is copied to the shared drive's `application-files` folder, encrypted with
+   the same passphrase, and each file is checked to make sure it arrived intact.
+7. Only once all of that has worked, the bin is emptied of anything older than 30 days, and job applications
+   older than **12 months** are deleted (unless the person was hired), along with their files.
+8. Old copies are cleared out automatically. Kept: **30 nightly copies, 12 monthly copies**
+   (from the 1st of each month) and **7 spreadsheets**. A resume or cover letter that leaves the dashboard stays
+   in the Drive's `removed` folder for 30 days, then it's gone.
 
 **Every Monday:** a short "backups are running" email.
 
@@ -55,7 +61,9 @@ touched by a failed night.
 - Tampered or damaged backup files are detected (checksums) before anything is restored.
 - Deleting someone for a **privacy request** removes them *and* their change history straight away.
   Their details remain in the encrypted backups until those backups expire (at most 12 months).
-  Mention this in the privacy policy.
+  Mention this in the privacy policy. Job applications work the same way.
+- Resumes and cover letters are encrypted on the Drive, including their file names, so even someone who
+  somehow opened the shared drive couldn't read them without the passphrase.
 
 ## What's inside the database
 
@@ -97,6 +105,11 @@ Nothing here goes in chat. Each value is pasted straight into the right settings
 | `GDRIVE_SHARED_DRIVE_ID` | The shared drive's ID (from its web address) |
 | `ALERT_SMTP_USER` / `ALERT_SMTP_APP_PASSWORD` | The alerts sender and its app password |
 | `ALERT_TO` | `venue.manager@…, ea@…` |
+| `SUPABASE_S3_ENDPOINT` / `SUPABASE_S3_REGION` | From Supabase → Storage → Settings → S3 connection |
+| `SUPABASE_S3_ACCESS_KEY_ID` / `SUPABASE_S3_SECRET_ACCESS_KEY` | An S3 access key created on that same page, used only by the backup |
+
+Until the four file-storage secrets are added, the nightly summary shows a warning that resumes and cover
+letters aren't being backed up yet.
 
 **One-off step on the test project only:** run this once in its SQL editor to mark it as the test copy:
 `create schema restore_guard; create table restore_guard.this_is_the_test_database (note text);`
@@ -119,3 +132,5 @@ Until the secrets are added, they skip quietly instead of failing.
 2. Decrypt it: `gpg --decrypt confession-….dump.gpg > backup.dump` (it asks for the passphrase).
 3. Restore it: `pg_restore --no-owner --no-privileges --dbname "<new project connection string>" backup.dump`
 4. Point Netlify at the new project, then everyone signs in again with Google.
+5. Copy the resumes and cover letters back from the Drive's `application-files/current` folder. They're
+   encrypted, so this is done with the backup tool and the passphrase. I'll run this step with you.

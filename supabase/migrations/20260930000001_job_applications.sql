@@ -14,13 +14,14 @@ create table public.job_applications (
   email text not null check (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   mobile text not null check (length(mobile) between 6 and 30),
   roles text[] not null check (cardinality(roles) between 1 and 10),
-  message text not null default '' check (length(message) <= 5000),
+  message text not null check (length(btrim(message)) between 1 and 5000),
+  -- Every question is required, including both files.
   -- Paths inside the private 'job-applications' file store. The files themselves never
   -- go in the database or in email.
   resume_path text not null,
   resume_name text not null,
-  cover_letter_path text,
-  cover_letter_name text,
+  cover_letter_path text not null,
+  cover_letter_name text not null,
   status text not null default 'new' check (status in ('new', 'reviewing', 'interview', 'hired', 'not_suitable')),
   notes text not null default '',
   submitted_at timestamptz not null default now(),
@@ -31,7 +32,7 @@ create table public.job_applications (
 create index job_applications_live on public.job_applications (submitted_at desc) where deleted_at is null;
 
 -- Files that should be removed from file storage. Deleting a database row can't remove
--- the file itself, so the clean-up job (a Netlify Function, phase 4) empties this queue.
+-- the file itself, so the nightly job (scripts/backup/storage-cleanup.sh) empties this queue after the backup.
 create table public.storage_cleanup (
   id bigint generated always as identity primary key,
   bucket text not null,

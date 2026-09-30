@@ -139,10 +139,10 @@ function ApplicationCard({ a }: { a: JobApplication }) {
 
       <div className="app-files">
         <FileLink label="Resume" file={a.resume} />
-        {a.coverLetter ? <FileLink label="Cover letter" file={a.coverLetter} /> : <span className="small muted">No cover letter</span>}
+        <FileLink label="Cover letter" file={a.coverLetter} />
       </div>
 
-      {a.message && <p className="app-message">{a.message}</p>}
+      <p className="app-message">{a.message}</p>
 
       <label className="field">
         <span>Team notes</span>

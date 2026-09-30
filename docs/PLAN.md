@@ -446,8 +446,9 @@ Home shows "Bookings to finalise", pipeline cards show the paperwork step, and t
 ## 12. Work with us: job applications (30 September 2026)
 
 A third form on the Forms page, replacing the HubSpot form on confessionportadelaide.com/jointheteam. It asks
-the same questions (first name, last name, email, mobile, job roles, resume, message) and adds an optional
-cover letter.
+the same questions (first name, last name, email, mobile, job roles, resume, message) and adds a cover letter.
+**Every question is required**, including both files; the form won't send until all are done, and the
+database refuses incomplete applications too.
 
 - **Roles:** Bar staff, Door staff, Glassy, Kitchen & event staff, Promoters, Sound & lighting engineer. At least one is required.
 - **Files:** PDF or Word only, up to 5 MB each. The form checks this before sending, and the file store enforces it again.
@@ -456,9 +457,12 @@ cover letter.
 - **Privacy:** files sit in a private Supabase Storage bucket (`job-applications`). The team opens them with
   short-lived links, and they never go into email. Applications are deleted automatically 12 months after they
   arrive unless the person is hired (nightly job, after the backup). The bin and privacy deletes work the same
-  way as for contacts. Deleted files are queued in `storage_cleanup` for the clean-up function to remove.
+  way as for contacts. Deleted files are queued in `storage_cleanup` and removed by the nightly job, after the backup.
 - **Live version (phase 4):** the form posts to a Netlify Function, which checks the file type and size,
   uploads the files with the server key and saves the row. The browser never holds a key.
+- **Backups:** every night the application details go to Google Drive with the database backup and a job
+  applications spreadsheet, and every resume and cover letter is copied to the Drive's `application-files`
+  folder, encrypted, and checked. See docs/DATA-SAFETY.md.
 - **Embedding:** the Forms page gives WordPress embed code with a small script, so the frame resizes to fit the
   form on phones, tablets and computers, with no scrollbar inside the page. All three forms work this way.
 - **Database:** `supabase/migrations/20260930000001_job_applications.sql`, covered by `npm run test:db`.
